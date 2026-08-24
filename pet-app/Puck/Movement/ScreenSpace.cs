@@ -99,6 +99,10 @@ public sealed record ScreenSpace
         return WorkingAreas[index].Bottom;
     }
 
+    /// 그 지점이 속한 화면의 작업 영역. 말풍선처럼 "이 화면 안에" 두어야
+    /// 하는 것들이 쓴다.
+    public Rect WorkingAreaContaining(Point point) => WorkingAreas[IndexOfScreenContaining(point)];
+
     /// 그 지점이 속한 화면의 위쪽 끝.
     ///
     /// RoamableArea.Top(경계 상자)을 쓰면 안 된다. 세로 모니터가 위로 어긋나

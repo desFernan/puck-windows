@@ -17,6 +17,7 @@ internal static partial class Win32
     public const uint SWP_NOACTIVATE = 0x0010;
     public const uint SWP_NOZORDER = 0x0004;
     public const uint SWP_SHOWWINDOW = 0x0040;
+    public const uint SWP_NOSIZE = 0x0001;
 
     public const int WM_DPICHANGED = 0x02E0;
 

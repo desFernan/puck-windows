@@ -33,6 +33,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     private WalkState? _walk;
     private MoveToState? _moveTo;
     private GlobalHotkeyManager? _hotkeys;
+    private TextInputBubbleWindow? _bubble;
     private Puck.Interop.WinEventHook? _foreground;
     private bool _wasPressed;
 
@@ -176,11 +177,37 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         _hotkeys.RegisterAll(HotkeyBindings.Defaults, new Dictionary<string, Action>
         {
             [nameof(HotkeyBindings.SummonPet)] = SummonToCursor,
+            [nameof(HotkeyBindings.TextInput)] = ShowInputBubble,
         });
 
         if (_hotkeys.Unavailable.Count > 0)
             AppLogger.Warning("hotkey", "다른 프로그램이 이미 쓰고 있어 등록하지 못한 핫키가 있습니다",
                 new Dictionary<string, object?> { ["names"] = string.Join(", ", _hotkeys.Unavailable) });
+    }
+
+    /// 펫 옆에 입력 버블을 띄운다. 받은 문장은 Phase 3의 에이전트가 가져간다 —
+    /// 지금은 로그에만 남긴다.
+    private void ShowInputBubble()
+    {
+        if (_body is null || _avatar is null || _screens is null) return;
+
+        if (_bubble is null)
+        {
+            _bubble = new TextInputBubbleWindow();
+            _bubble.Submitted += text =>
+                AppLogger.Log(LogLevel.Info, "input", "입력 버블에서 문장을 받았습니다",
+                    new Dictionary<string, object?> { ["text"] = text });
+        }
+
+        _bubble.ShowAt(BubbleOrigin());
+    }
+
+    /// 펫 머리 위. 프레임마다 다시 계산해서 펫이 걸으면 따라간다.
+    private Point BubbleOrigin()
+    {
+        var position = _body!.Position;
+        var display = _screens!.WorkingAreaContaining(position);
+        return SpeechBubblePlacement.Origin(position, _avatar!.Size.Height, _bubble!.MeasuredSize, display);
     }
 
     /// 커서 쪽으로 오라고 한다. 커서가 창 위면 그 창의 윗변에 자리를 잡고,
@@ -289,6 +316,10 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         _controller.Advance(dt);
         _body.UpdateBounce(_avatar.CurrentClipKey, _stopwatch.Elapsed);
 
+        // 버블이 떠 있으면 펫을 따라온다. 한 번 놓고 두면 펫이 걸어 나간
+        // 자리에 빈 상자만 남는다.
+        if (_bubble is { IsVisible: true }) _bubble.MoveTo(BubbleOrigin());
+
         _window.MoveTo(_body.Position, _body.VisualBounds);
         _window.UpdateClickThrough(_avatar);
     }
@@ -342,6 +373,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     {
         _clock.Stop();
         _hotkeys?.Dispose();
+        _bubble?.Close();
         _foreground?.Dispose();
         _windows?.Dispose();
         _tray?.Dispose();

@@ -18,4 +18,13 @@
   <sys:Double x:Key="CardCornerRadius">6</sys:Double>
   <sys:Double x:Key="RowCornerRadius">4</sys:Double>
   <sys:Double x:Key="PanelCornerRadius">14</sys:Double>
+
+  <!--
+    같은 값의 CornerRadius 타입 판. Border.CornerRadius는 Double을 받지 않고,
+    DynamicResource는 타입 변환기를 거치지 않는다 — 숫자만 두면 실행할 때
+    "6은 CornerRadius의 유효한 값이 아닙니다"로 창이 통째로 안 뜬다.
+  -->
+  <CornerRadius x:Key="CardCorner">6</CornerRadius>
+  <CornerRadius x:Key="RowCorner">4</CornerRadius>
+  <CornerRadius x:Key="PanelCorner">14</CornerRadius>
 </ResourceDictionary>

@@ -12,6 +12,7 @@ public static class Strings
         ["tray.quit"] = "종료",
         ["avatar.loadFailed"] = "아바타를 불러오지 못했습니다",
         ["avatar.noneInstalled"] = "설치된 아바타가 없습니다",
+        ["bubble.prompt"] = "무엇을 시킬까요? (Enter로 보내기, Esc로 닫기)",
     };
 
     /// 없는 키는 키 자체를 돌려준다 — 문자열 하나가 빠졌다고 UI가
@@ -24,4 +25,5 @@ public static class Strings
     public static string TrayQuit => Get("tray.quit");
     public static string AvatarLoadFailed => Get("avatar.loadFailed");
     public static string AvatarNoneInstalled => Get("avatar.noneInstalled");
+    public static string BubblePrompt => Get("bubble.prompt");
 }
