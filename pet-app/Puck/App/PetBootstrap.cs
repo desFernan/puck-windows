@@ -14,7 +14,7 @@ namespace Puck.App;
 
 /// 전부를 엮는 한 곳. 여기서 아바타를 고르고, 창을 띄우고, 프레임
 /// 루프를 돌리고, 제스처를 상태 전이로 옮긴다.
-public sealed class PetBootstrap : IDisposable
+public sealed class PetBootstrap : IDisposable, IWanderDelegate
 {
     private readonly SettingsStore _settings;
     private readonly CompositionFrameClock _clock = new();
@@ -29,6 +29,7 @@ public sealed class PetBootstrap : IDisposable
     private ReactDragState? _drag;
     private TrayIcon? _tray;
     private WindowListWatcher? _windows;
+    private WalkState? _walk;
     private Puck.Interop.WinEventHook? _foreground;
     private bool _wasPressed;
 
@@ -114,10 +115,11 @@ public sealed class PetBootstrap : IDisposable
         _drag = new ReactDragState();
 
         var ledge = new ClimbLedgeState();
+        _walk = new WalkState { Ledge = ledge };
         var states = new Dictionary<StateKind, IStateHandler>
         {
-            [StateKind.Idle] = new IdleState(new WanderScheduler()),
-            [StateKind.Walk] = new WalkState { Ledge = ledge },
+            [StateKind.Idle] = new IdleState(new WanderScheduler()) { Wander = this },
+            [StateKind.Walk] = _walk,
             [StateKind.Fall] = new FallState(),
             [StateKind.Land] = new LandState(),
             [StateKind.ClimbLedge] = ledge,
@@ -158,6 +160,46 @@ public sealed class PetBootstrap : IDisposable
         UnclimbableWindows = UnclimbableWindows(),
         RequestTransition = _ => { },   // CharacterController가 자기 것으로 갈아 끼운다
     };
+
+    /// 배회 타이머가 찼다. 창 목록을 아는 건 여기뿐이라 "저 창을 타고 오르자"는
+    /// 결정이 여기서 나온다.
+    public void WanderRequested(WanderOutcome outcome)
+    {
+        if (_body is null || _controller is null || _walk is null) return;
+
+        switch (outcome)
+        {
+            case WanderOutcome.ClimbNearestWindow when _windows is not null && _avatar is not null:
+                var climbTarget = WindowSupport.NearestClimbTarget(
+                    _body.Position, _windows.Windows,
+                    roamableTop: _screens!.CeilingY(_body.Position),
+                    avatarHeight: _avatar.Size.Height,
+                    excluding: UnclimbableWindows());
+
+                // 오를 것이 없으면 그냥 걷는다 — 오류가 아니라 흔한 경우다.
+                _walk.TargetX = climbTarget?.X;
+                _controller.Request(StateKind.Walk);
+                break;
+
+            case WanderOutcome.WalkToRandomPoint:
+                _walk.TargetX = null;   // WalkState가 알아서 뽑는다
+                _controller.Request(StateKind.Walk);
+                break;
+
+            case WanderOutcome.Stay:
+                break;
+        }
+    }
+
+    /// 서 있던 자리가 사라진 게 아니라 창 뒤로 갔다. 여기서 떨어뜨리면
+    /// 숨어 있던 펫이 사람이 지금 쓰는 창 한가운데로 나온다 — 그래서
+    /// 그냥 둔다. 다음 배회 때 알아서 걸어 나오고, 그 창이 치워지면
+    /// 평소 판정이 다시 돈다.
+    public void LostFootingBehind(WindowInfo window)
+    {
+        AppLogger.Log(LogLevel.Debug, "movement", "발밑이 창 뒤로 갔습니다",
+            new Dictionary<string, object?> { ["window"] = window.OwnerName });
+    }
 
     /// 설정의 "포커스된 창 위로는 올라가지 않기". 사람이 지금 쓰고 있는 창
     /// 위로 펫이 기어오르면 방해가 된다 — 그 창은 벽이 아니라 없는 것처럼 지나친다.

@@ -35,6 +35,84 @@ public class WindowStatesTests
         }, body, requested);
     }
 
+    private sealed class RecordingWander : IWanderDelegate
+    {
+        public List<WanderOutcome> Outcomes { get; } = [];
+        public List<WindowInfo> LostBehind { get; } = [];
+        public void WanderRequested(WanderOutcome outcome) => Outcomes.Add(outcome);
+        public void LostFootingBehind(WindowInfo window) => LostBehind.Add(window);
+    }
+
+    // --- Idle: 가려짐 vs 사라짐 ---
+
+    [Fact]
+    public void FootingGoingBehindAWindowIsNotAFall()
+    {
+        // 사람이 창을 앞으로 가져왔을 뿐이다. 여기서 떨어뜨리면 숨어 있던
+        // 펫이 사람이 지금 쓰는 창 한가운데로 나온다.
+        var covering = At(1, 0, 300, 1000, 500);
+        var body = new CharacterBody(new FakeAvatar { VisualBounds = Pet }, new Point(500, 400));
+        var requested = new List<StateKind>();
+        var wander = new RecordingWander();
+        var context = new StateContext
+        {
+            Body = body, RoamableArea = Area, AvatarHeight = 100, VisualBounds = Pet,
+            WalkSpeed = MovementSolver.WalkSpeed,
+            LandingY = _ => 800,               // 발밑(400)보다 아래 = 틈이 생겼다
+            HasGroundUnder = _ => true, SnapToGround = (p, _) => p, LedgeBeyond = (_, _, _) => null,
+            Windows = [covering], RequestTransition = requested.Add,
+        };
+
+        var idle = new IdleState(new WanderScheduler(new Random(1))) { Wander = wander };
+        idle.Enter();
+        idle.Update(0.016, context);
+
+        Assert.Empty(requested);
+        Assert.Equal(new IntPtr(1), Assert.Single(wander.LostBehind).Handle);
+    }
+
+    [Fact]
+    public void FootingSimplyVanishingIsStillAFall()
+    {
+        var body = new CharacterBody(new FakeAvatar { VisualBounds = Pet }, new Point(500, 400));
+        var requested = new List<StateKind>();
+        var wander = new RecordingWander();
+        var context = new StateContext
+        {
+            Body = body, RoamableArea = Area, AvatarHeight = 100, VisualBounds = Pet,
+            WalkSpeed = MovementSolver.WalkSpeed, LandingY = _ => 800,
+            HasGroundUnder = _ => true, SnapToGround = (p, _) => p, LedgeBeyond = (_, _, _) => null,
+            Windows = [],                       // 덮는 창이 없다 = 그냥 사라졌다
+            RequestTransition = requested.Add,
+        };
+
+        var idle = new IdleState(new WanderScheduler(new Random(1))) { Wander = wander };
+        idle.Enter();
+        idle.Update(0.016, context);
+
+        Assert.Equal(StateKind.Fall, Assert.Single(requested));
+        Assert.Empty(wander.LostBehind);
+    }
+
+    [Fact]
+    public void TheWanderOutcomeGoesToWhoeverKnowsTheWindows()
+    {
+        var (context, _, requested) = MakeContext(new Point(500, 800), []);
+        var wander = new RecordingWander();
+        var idle = new IdleState(new WanderScheduler(new Random(1))
+        {
+            MinimumInterval = TimeSpan.FromSeconds(1),
+            MaximumInterval = TimeSpan.FromSeconds(1),
+        })
+        { Wander = wander };
+        idle.Enter();
+        idle.Update(1.5, context);
+
+        // 델리게이트가 있으면 상태는 스스로 전이를 정하지 않는다.
+        Assert.Empty(requested);
+        Assert.Single(wander.Outcomes);
+    }
+
     // --- Walk -> Climb ---
 
     [Fact]

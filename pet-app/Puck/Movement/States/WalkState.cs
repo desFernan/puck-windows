@@ -14,14 +14,22 @@ public sealed class WalkState : IStateHandler
     public string ClipKey => "walk";
     public bool LoopsClip => true;
 
-    /// 목적지. null이면 Enter에서 뽑는다.
-    public double? TargetX { get; init; }
+    /// 목적지. null이면 Enter에서 무작위로 뽑는다.
+    ///
+    /// Enter가 **읽고 비운다** — 한 번 겨눈 것이 다음 걸음까지 남으면, 배회가
+    /// 정해 준 목적지로 영원히 같은 자리를 오간다. ReactDrag의 DragPosition,
+    /// ClimbLedge의 Target과 같은 일회성 값이다.
+    public double? TargetX { get; set; }
 
     /// 화면 턱에서 막혔을 때 올라갈 목적지를 넘겨줄 상대. null이면
     /// 오르지 않고 가장자리에 선다(모니터가 하나면 그럴 일 자체가 없다).
     public ClimbLedgeState? Ledge { get; init; }
 
-    public void Enter() => _target = TargetX ?? double.NaN;
+    public void Enter()
+    {
+        _target = TargetX ?? double.NaN;
+        TargetX = null;
+    }
 
     public void Update(double dt, StateContext context)
     {

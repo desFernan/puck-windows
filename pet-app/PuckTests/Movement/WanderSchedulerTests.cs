@@ -13,7 +13,7 @@ public class WanderSchedulerTests
             MaximumInterval = TimeSpan.FromSeconds(3),
         };
         scheduler.Reset();
-        Assert.False(scheduler.Tick(2.9));
+        Assert.Null(scheduler.Tick(2.9));
     }
 
     [Fact]
@@ -25,8 +25,8 @@ public class WanderSchedulerTests
             MaximumInterval = TimeSpan.FromSeconds(3),
         };
         scheduler.Reset();
-        Assert.False(scheduler.Tick(2.0));
-        Assert.True(scheduler.Tick(1.5));
+        Assert.Null(scheduler.Tick(2.0));
+        Assert.NotNull(scheduler.Tick(1.5));
     }
 
     [Fact]
@@ -38,9 +38,9 @@ public class WanderSchedulerTests
             MaximumInterval = TimeSpan.FromSeconds(1),
         };
         scheduler.Reset();
-        Assert.True(scheduler.Tick(1.0));
-        Assert.False(scheduler.Tick(0.5));
-        Assert.True(scheduler.Tick(0.5));
+        Assert.NotNull(scheduler.Tick(1.0));
+        Assert.Null(scheduler.Tick(0.5));
+        Assert.NotNull(scheduler.Tick(0.5));
     }
 
     [Fact]
