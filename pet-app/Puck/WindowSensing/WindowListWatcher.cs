@@ -1,0 +1,129 @@
+using System.Diagnostics;
+using System.Windows.Threading;
+using Puck.Diagnostics;
+
+namespace Puck.WindowSensing;
+
+/// 주기적으로 무언가를 시키는 것. 진짜 타이머와 테스트용 가짜를 바꿔 끼우려고
+/// 인터페이스로 둔다.
+public interface IWatcherTicker
+{
+    Action? Tick { get; set; }
+    void Start(double hz);
+    void Stop();
+}
+
+/// WPF 디스패처 타이머. 창 목록은 프레임 루프(UI 스레드)가 읽으므로 갱신도
+/// 같은 스레드에서 일어나야 한다.
+public sealed class DispatcherWatcherTicker : IWatcherTicker
+{
+    private readonly DispatcherTimer _timer = new(DispatcherPriority.Background);
+
+    public DispatcherWatcherTicker() => _timer.Tick += (_, _) => Tick?.Invoke();
+
+    public Action? Tick { get; set; }
+
+    public void Start(double hz)
+    {
+        _timer.Stop();
+        _timer.Interval = TimeSpan.FromSeconds(1.0 / hz);
+        _timer.Start();
+    }
+
+    public void Stop() => _timer.Stop();
+}
+
+/// 화면의 창 목록을 계속 최신으로 들고 있는다.
+///
+/// 프레임 루프(60Hz)와 분리한 이유는 창 목록이 프레임마다 바뀌지 않기 때문이다 —
+/// EnumWindows를 초당 60번 도는 것은 그냥 낭비다. 대신 사람이 창을 바꾼 직후
+/// (포그라운드 변경)에는 잠깐 더 자주 본다. 그때가 목록이 가장 많이 흔들린다.
+public sealed class WindowListWatcher : IDisposable
+{
+    public const double IdlePollHz = 10;
+    public const double BurstPollHz = 15;
+    public const double BurstSeconds = 3;
+
+    private readonly Func<IReadOnlyList<WindowInfo>> _source;
+    private readonly IWatcherTicker _ticker;
+    private readonly Func<double> _now;
+
+    private double? _burstEnd;
+    private bool _disposed;
+
+    public WindowListWatcher(
+        Func<IReadOnlyList<WindowInfo>> source,
+        IWatcherTicker ticker,
+        Func<double> now)
+    {
+        _source = source;
+        _ticker = ticker;
+        _now = now;
+        _ticker.Tick = OnTick;
+    }
+
+    /// 실제 창 목록을 단조 증가 시계로 보는 기본 구성.
+    public static WindowListWatcher CreateDefault()
+    {
+        var uptime = Stopwatch.StartNew();
+        return new WindowListWatcher(
+            () => WindowFilter.Keep(WindowListSource.Fetch(),
+                                    Environment.ProcessId, WindowFilter.DefaultMinimumSize),
+            new DispatcherWatcherTicker(),
+            () => uptime.Elapsed.TotalSeconds);
+    }
+
+    /// 앞에서 뒤 순서. 프레임 루프가 매 프레임 읽는다.
+    public IReadOnlyList<WindowInfo> Windows { get; private set; } = [];
+
+    public void Start()
+    {
+        Refresh();
+        _ticker.Start(IdlePollHz);
+    }
+
+    /// 포그라운드 창이 바뀌었다 — 지금 한 번 더 보고, 잠깐 더 자주 본다.
+    public void NoteForegroundChanged()
+    {
+        if (_disposed) return;
+        Refresh();
+        _burstEnd = _now() + BurstSeconds;
+        _ticker.Start(BurstPollHz);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        // 타이머를 남겨 둔 워처는 아무도 참조하지 않아도 계속 돈다.
+        _ticker.Stop();
+        _ticker.Tick = null;
+    }
+
+    private void OnTick()
+    {
+        if (_disposed) return;
+
+        Refresh();
+
+        if (_burstEnd is not { } end || _now() < end) return;
+        _burstEnd = null;
+        _ticker.Start(IdlePollHz);
+    }
+
+    private void Refresh()
+    {
+        try
+        {
+            Windows = _source();
+        }
+        catch (Exception ex)
+        {
+            // 열거하는 사이에 창이 사라지면 예외가 날 수 있다. 프레임 루프가
+            // 매 프레임 이 목록을 읽으므로, 한 번 실패했다고 비워 버리면
+            // 창 위에 서 있던 펫이 그 프레임에 바닥으로 떨어진다.
+            AppLogger.Warning("windows", "창 목록을 갱신하지 못해 이전 목록을 유지합니다",
+                new Dictionary<string, object?> { ["error"] = ex.Message });
+        }
+    }
+}
