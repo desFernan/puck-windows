@@ -12,7 +12,8 @@ public class StatesTests
 
     private static (StateContext Context, CharacterBody Body, List<StateKind> Requested)
         MakeContext(Point start, Func<Point, double>? landingY = null,
-                    Func<Point, bool>? hasGroundUnder = null)
+                    Func<Point, bool>? hasGroundUnder = null,
+                    Func<Point, double, Rect, Point?>? ledgeBeyond = null)
     {
         var body = new CharacterBody(new FakeAvatar { VisualBounds = Pet }, start);
         var requested = new List<StateKind>();
@@ -26,6 +27,7 @@ public class StatesTests
             LandingY = landingY ?? (_ => 800),
             HasGroundUnder = hasGroundUnder ?? (_ => true),
             SnapToGround = (p, _) => p,
+            LedgeBeyond = ledgeBeyond ?? ((_, _, _) => null),
             RequestTransition = requested.Add,
         };
         return (context, body, requested);
@@ -147,6 +149,75 @@ public class StatesTests
         idle.Update(0.016, context);
 
         Assert.Equal(StateKind.Fall, Assert.Single(requested));
+    }
+
+    // --- ClimbLedge ---
+
+    [Fact]
+    public void WalkClimbsTheLedgeWhenTheNextScreenAlongIsHigher()
+    {
+        // x>600에는 화면이 없지만, 그 방향에 바닥이 더 높은(400) 화면이 있다.
+        var ledgeTarget = new Point(700, 400);
+        var (context, _, requested) = MakeContext(new Point(500, 800),
+            hasGroundUnder: p => p.X <= 600,
+            ledgeBeyond: (_, _, _) => ledgeTarget);
+        var climb = new ClimbLedgeState();
+        var walk = new WalkState { TargetX = 900, Ledge = climb };
+        walk.Enter();
+        walk.Update(2.0, context);
+
+        Assert.Equal(StateKind.ClimbLedge, Assert.Single(requested));
+        Assert.Equal(ledgeTarget, climb.Target);
+    }
+
+    [Fact]
+    public void WalkJustStopsWhenThereIsNoLedgeToClimb()
+    {
+        var (context, body, requested) = MakeContext(new Point(500, 800),
+            hasGroundUnder: p => p.X <= 600);
+        var walk = new WalkState { TargetX = 900, Ledge = new ClimbLedgeState() };
+        walk.Enter();
+        walk.Update(2.0, context);
+
+        Assert.Equal(StateKind.Idle, Assert.Single(requested));
+        Assert.Equal(500, body.Position.X);
+    }
+
+    [Fact]
+    public void ClimbGoesStraightUpBeforeMovingAcross()
+    {
+        // 대각선으로 가면 올라가는 도중 몸의 절반이 빈 공간에 걸린다.
+        var (context, body, _) = MakeContext(new Point(500, 800));
+        var climb = new ClimbLedgeState { Target = new Point(300, 400) };
+        climb.Enter();
+        climb.Update(1.0, context);
+
+        Assert.Equal(500, body.Position.X);           // X는 아직 그대로
+        Assert.Equal(710, body.Position.Y);           // 90px/s 만큼 위로
+    }
+
+    [Fact]
+    public void ClimbCrossesOntoTheHigherScreenAndThenIdles()
+    {
+        var (context, body, requested) = MakeContext(new Point(500, 800));
+        var climb = new ClimbLedgeState { Target = new Point(480, 400) };
+        climb.Enter();
+
+        for (var i = 0; i < 600 && requested.Count == 0; i++)
+            climb.Update(1.0 / 60, context);
+
+        Assert.Equal(StateKind.Idle, Assert.Single(requested));
+        Assert.Equal(new Point(480, 400), body.Position);
+    }
+
+    [Fact]
+    public void ClimbWithoutATargetGivesUpInsteadOfHanging()
+    {
+        var (context, _, requested) = MakeContext(new Point(500, 800));
+        var climb = new ClimbLedgeState();
+        climb.Enter();
+        climb.Update(0.016, context);
+        Assert.Equal(StateKind.Idle, Assert.Single(requested));
     }
 
     // --- Fall ---

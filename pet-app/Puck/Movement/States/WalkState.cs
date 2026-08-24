@@ -17,6 +17,10 @@ public sealed class WalkState : IStateHandler
     /// 목적지. null이면 Enter에서 뽑는다.
     public double? TargetX { get; init; }
 
+    /// 화면 턱에서 막혔을 때 올라갈 목적지를 넘겨줄 상대. null이면
+    /// 오르지 않고 가장자리에 선다(모니터가 하나면 그럴 일 자체가 없다).
+    public ClimbLedgeState? Ledge { get; init; }
+
     public void Enter() => _target = TargetX ?? double.NaN;
 
     public void Update(double dt, StateContext context)
@@ -41,6 +45,17 @@ public sealed class WalkState : IStateHandler
         // 걸친 채 멈추면 그것도 "잘려 보이는" 것이기 때문이다.
         if (!context.ArtworkHasGround(next))
         {
+            // 옆 화면의 바닥이 위에 있으면 그 턱을 타고 올라간다. 없으면
+            // 여기가 세상 끝이니 그냥 선다.
+            var direction = _target >= body.Position.X ? 1.0 : -1.0;
+            if (Ledge is not null &&
+                context.LedgeBeyond(body.Position, direction, context.VisualBounds) is { } ledge)
+            {
+                Ledge.Target = ledge;
+                context.RequestTransition(StateKind.ClimbLedge);
+                return;
+            }
+
             context.RequestTransition(StateKind.Idle);
             return;
         }

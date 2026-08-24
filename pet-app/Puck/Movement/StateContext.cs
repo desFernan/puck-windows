@@ -36,6 +36,10 @@ public sealed class StateContext
     /// 컨트롤러가 프레임 끝마다 불변식으로 적용한다.
     public required Func<Point, Rect, Point> SnapToGround { get; init; }
 
+    /// (위치, 진행 방향, 그림 외곽선) -> 타고 올라갈 수 있는 턱 위의 설 자리.
+    /// 없으면 null. 낮은 화면에서 높은 화면으로 돌아가는 유일한 걸음이다.
+    public required Func<Point, double, Rect, Point?> LedgeBeyond { get; init; }
+
     /// 이 프레임이 끝난 뒤 다른 상태로 가 달라는 요청. 즉시가 아니라
     /// 지연되는 이유는, 어떤 상태도 자기 update 도중에 컨트롤러를
     /// 변형하면 안 되기 때문이다.

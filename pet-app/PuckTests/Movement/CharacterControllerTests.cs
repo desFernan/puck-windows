@@ -48,6 +48,7 @@ public class CharacterControllerTests
             LandingY = _ => 800,
             HasGroundUnder = hasGroundUnder ?? (_ => true),
             SnapToGround = snapToGround ?? ((p, _) => p),
+            LedgeBeyond = (_, _, _) => null,
             RequestTransition = _ => { },
         });
     }

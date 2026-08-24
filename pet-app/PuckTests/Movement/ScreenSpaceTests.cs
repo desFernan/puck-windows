@@ -112,6 +112,29 @@ public class ScreenSpaceTests
     }
 
     [Fact]
+    public void TheHigherScreenNextDoorIsAClimbableLedge()
+    {
+        // 세로 모니터 바닥(1465)에 선 펫이 왼쪽으로 가려 한다. 그쪽에는
+        // 바닥이 1032인 주 모니터가 있다 — 걸어서는 못 가고, 타고 올라야 한다.
+        var pet = new Rect(-65, -133, 130, 133);
+        var ledge = Staircase().LedgeBeyond(new Point(1985, 1465), directionX: -1, pet);
+
+        Assert.NotNull(ledge);
+        Assert.Equal(1855, ledge!.Value.X);   // 1920 - 65: 그림이 통째로 주 모니터 안
+        Assert.Equal(1032, ledge.Value.Y);
+    }
+
+    [Fact]
+    public void ThereIsNoLedgeTowardsTheOpenSideOfTheScreen()
+    {
+        var pet = new Rect(-65, -133, 130, 133);
+        // 오른쪽에는 더 높은 화면이 없다.
+        Assert.Null(Staircase().LedgeBeyond(new Point(1985, 1465), directionX: 1, pet));
+        // 주 모니터 바닥에서는 어느 쪽으로도 올라갈 턱이 없다.
+        Assert.Null(Staircase().LedgeBeyond(new Point(100, 1032), directionX: -1, pet));
+    }
+
+    [Fact]
     public void EmptyDisplayListIsRefused()
     {
         Assert.Throws<ArgumentException>(() => new ScreenSpace([], []));

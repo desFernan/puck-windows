@@ -104,12 +104,14 @@ public sealed class PetBootstrap : IDisposable
             bounceIntensity: avatar.BounceIntensityOrDefault);
         _drag = new ReactDragState();
 
+        var ledge = new ClimbLedgeState();
         var states = new Dictionary<StateKind, IStateHandler>
         {
             [StateKind.Idle] = new IdleState(new WanderScheduler()),
-            [StateKind.Walk] = new WalkState(),
+            [StateKind.Walk] = new WalkState { Ledge = ledge },
             [StateKind.Fall] = new FallState(),
             [StateKind.Land] = new LandState(),
+            [StateKind.ClimbLedge] = ledge,
             [StateKind.ReactClick] = new ReactClickState(),
             [StateKind.ReactDrag] = _drag,
         };
@@ -140,6 +142,7 @@ public sealed class PetBootstrap : IDisposable
         LandingY = _screens.FloorY,
         HasGroundUnder = _screens.HasGroundUnder,
         SnapToGround = _screens.NearestStandablePoint,
+        LedgeBeyond = _screens.LedgeBeyond,
         RequestTransition = _ => { },   // CharacterController가 자기 것으로 갈아 끼운다
     };
 

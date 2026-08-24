@@ -69,6 +69,28 @@ public sealed record ScreenSpace
         return new Point(contained.X, Math.Min(point.Y, area.Bottom));
     }
 
+    /// 그 방향으로 더 갈 수 없을 때, 타고 올라갈 수 있는 턱이 있으면
+    /// 올라선 뒤 설 자리. 없으면 null.
+    ///
+    /// 모니터가 계단처럼 놓이면 낮은 화면에서 높은 화면으로는 걸어서 갈 수
+    /// 없다 — 내려가는 건 떨어지면 되지만 올라오는 힘이 없다. 그러면 펫은
+    /// 낮은 모니터에 영영 갇힌다.
+    public Point? LedgeBeyond(Point from, double directionX, Rect visualBounds)
+    {
+        // 진행 방향에 있으면서 바닥이 지금보다 위인 화면들.
+        var candidates = WorkingAreas
+            .Where(a => a.Bottom < from.Y && (directionX > 0 ? a.Left >= from.X : a.Right <= from.X))
+            .OrderBy(a => directionX > 0 ? a.Left - from.X : from.X - a.Right)
+            .ToList();
+
+        if (candidates.Count == 0) return null;
+
+        // 올라선 자리에서 그림이 통째로 그 화면 안에 들어와야 한다.
+        var area = candidates[0];
+        var standing = PetBounds.Contain(new Point(from.X, area.Bottom), visualBounds, area);
+        return new Point(standing.X, area.Bottom);
+    }
+
     /// 그 지점에서 곧장 떨어지면 닿는 바닥. Phase 2에서 창 윗면이
     /// 착지면으로 끼어들기 전까지는 언제나 화면 바닥이다.
     public double FloorY(Point point)

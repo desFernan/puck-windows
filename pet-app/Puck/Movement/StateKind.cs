@@ -8,6 +8,8 @@ public enum StateKind
     Walk,
     Fall,
     Land,
+    /// 모니터 경계의 턱을 타고 위 화면으로. Phase 2의 Climb(창 옆면)과는 다른 것이다.
+    ClimbLedge,
     ReactClick,
     ReactDrag,
 }

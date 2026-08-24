@@ -56,6 +56,7 @@ public sealed class CharacterController
             LandingY = source.LandingY,
             HasGroundUnder = source.HasGroundUnder,
             SnapToGround = source.SnapToGround,
+            LedgeBeyond = source.LedgeBeyond,
             RequestTransition = Request,
         };
 
