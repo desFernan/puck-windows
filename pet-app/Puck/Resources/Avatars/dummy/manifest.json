@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "name": "dummy",
+  "type": "sprites",
+  "hitbox": { "width": 130, "height": 133 },
+  "clips": { "idle": "idle" }
+}

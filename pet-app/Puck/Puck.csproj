@@ -24,4 +24,9 @@
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
   </ItemGroup>
+
+  <!-- 동봉 아바타. 사용자가 Avatars\에 아무것도 넣지 않아도 펫이 뜬다. -->
+  <ItemGroup>
+    <Content Include="Resources\Avatars\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
