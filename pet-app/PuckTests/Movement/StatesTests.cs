@@ -193,6 +193,21 @@ public class StatesTests
         Assert.True(body.Position.X <= 950);
     }
 
+    [Fact]
+    public void FallBringsThePetBackWhenItsDisplayIsUnplugged()
+    {
+        // 오른쪽 모니터가 빠지면 거기 서 있던 펫은 남은 화면(0..1000) 밖인
+        // x=2500에 남는다. 속도가 0이라 벽 튕김도 일어나지 않으므로,
+        // 되돌리지 않으면 Fall/Land/Idle을 오가며 영영 보이지 않는다.
+        var (context, body, _) = MakeContext(new Point(2500, 1465));
+        var fall = new FallState();
+        fall.Enter();
+        fall.Update(1.0 / 60, context);
+
+        Assert.Equal(950, body.Position.X);   // 1000 - 50 (그림 절반)
+        Assert.Equal(800, body.Position.Y);
+    }
+
     // --- Land ---
 
     [Fact]

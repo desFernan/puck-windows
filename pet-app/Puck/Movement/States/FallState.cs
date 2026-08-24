@@ -60,6 +60,12 @@ public sealed class FallState : IStateHandler
             _horizontalVelocity = MovementSolver.ApplyGroundFriction(_horizontalVelocity, dt);
         }
 
+        // 모니터를 뽑으면 그 위에 있던 펫은 남은 화면 밖에 남는다. 거기서는
+        // 벽에 부딪히지도(속도가 0이라 튕김이 일어나지 않는다) 걷지도 못해서
+        // Fall/Land/Idle을 오가며 영영 보이지 않는다. 떨어질 때마다 화면 안으로
+        // 다시 넣는다 — 이미 안에 있으면 아무 일도 하지 않는다.
+        position = PetBounds.Contain(position, context.VisualBounds, context.RoamableArea);
+
         body.Position = position;
 
         if (MovementSolver.FacingToward(body.Position, position) is { } facing)
