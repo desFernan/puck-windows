@@ -53,8 +53,15 @@ public static class AvatarLoader
         return Load(data);
     }
 
+    /// UTF-8 BOM. System.Text.Json은 바이트를 직접 받으면 이걸 건너뛰지 않고
+    /// "0xEF is an invalid start of a value"로 죽는다. macOS에서 만든 매니페스트에는
+    /// 없지만 Windows에서 메모장·PowerShell·VS Code로 고치면 거의 항상 붙는다.
+    private static ReadOnlySpan<byte> Bom => [0xEF, 0xBB, 0xBF];
+
     public static AvatarLoadResult Load(ReadOnlySpan<byte> manifestData)
     {
+        if (manifestData.StartsWith(Bom)) manifestData = manifestData[Bom.Length..];
+
         AvatarManifest? manifest;
         try
         {

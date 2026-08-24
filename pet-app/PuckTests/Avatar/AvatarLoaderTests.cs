@@ -87,6 +87,17 @@ public class AvatarLoaderTests
     }
 
     [Fact]
+    public void AManifestWithAUtf8BomStillLoads()
+    {
+        // Windows에서 메모장·PowerShell·VS Code로 매니페스트를 고치면 BOM이 붙는다.
+        // 그걸 "깨진 아바타"로 거절하면 사람이 고칠 수 있는 게 없다.
+        var withBom = new byte[] { 0xEF, 0xBB, 0xBF }
+            .Concat(Encoding.UTF8.GetBytes(Minimal)).ToArray();
+        var result = AvatarLoader.Load(withBom);
+        Assert.Equal("a", result.Manifest.Name);
+    }
+
+    [Fact]
     public void MissingDirectoryReportsAvatarNotFound()
     {
         var missing = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());

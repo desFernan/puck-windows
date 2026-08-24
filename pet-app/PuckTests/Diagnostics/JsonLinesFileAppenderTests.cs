@@ -33,6 +33,23 @@ public class JsonLinesFileAppenderTests
     }
 
     [Fact]
+    public void TheFileHasNoByteOrderMark()
+    {
+        // 한 줄 = 한 이벤트로 읽는 도구들은 첫 줄이 0xEF로 시작하면 깨진다.
+        var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var appender = new JsonLinesFileAppender(dir);
+            appender.Append(LogLevel.Info, "x", "y", null);
+
+            var bytes = File.ReadAllBytes(Directory.GetFiles(dir, "*.jsonl").Single());
+            Assert.Equal((byte)'{', bytes[0]);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
     public void FieldNameCollidingWithReservedKeyIsPrefixed()
     {
         var dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());

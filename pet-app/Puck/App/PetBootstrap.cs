@@ -146,6 +146,10 @@ public sealed class PetBootstrap : IDisposable
     {
         if (_window is null || _avatar is null || _body is null || _controller is null) return;
 
+        // 숨어 있는 동안은 아무것도 하지 않는다 — 안 보이는 채로 돌아다니다가
+        // 다시 켰을 때 엉뚱한 곳에 서 있으면 "숨겼다 켰다"로 읽히지 않는다.
+        if (!_window.IsVisible) return;
+
         // 디스플레이 구성이 바뀌었을 수 있다. 목록이 비면(전부 잠듦)
         // 마지막으로 알던 것을 그대로 쓴다.
         _screens = ScreenSpace.Current() ?? _screens;

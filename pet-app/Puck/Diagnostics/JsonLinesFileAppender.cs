@@ -9,6 +9,10 @@ public sealed class JsonLinesFileAppender : IJsonLinesSink
 {
     private static readonly HashSet<string> Reserved = ["ts", "level", "category", "message"];
 
+    /// BOM 없는 UTF-8. Encoding.UTF8은 파일이 비어 있을 때 BOM을 먼저 쓰는데,
+    /// 그러면 첫 줄이 0xEF로 시작해 한 줄씩 읽는 도구(jq 등)가 깨진다.
+    private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
+
     private readonly string _directory;
     private readonly object _gate = new();
 
@@ -44,7 +48,7 @@ public sealed class JsonLinesFileAppender : IJsonLinesSink
         var line = Encoding.UTF8.GetString(buffer.ToArray()) + Environment.NewLine;
         lock (_gate)
         {
-            File.AppendAllText(CurrentFile(), line, Encoding.UTF8);
+            File.AppendAllText(CurrentFile(), line, Utf8NoBom);
         }
     }
 

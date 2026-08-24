@@ -54,9 +54,12 @@ public partial class PetOverlayWindow : Window
         if (_handle == IntPtr.Zero) return;
 
         var frame = OverlayPositioner.FrameFor(petPosition, visualBounds);
+        // SWP_SHOWWINDOW를 주면 안 된다 — 매 프레임 창을 다시 보이게 만들어서
+        // 트레이의 "펫 보이기/숨기기"가 Hide()를 부른 다음 프레임에 되돌아온다.
+        // 보이기/숨기기는 WPF의 Show()/Hide()가 소유한다.
         Win32.SetWindowPos(_handle, Win32.HWND_TOPMOST,
             frame.X, frame.Y, frame.Width, frame.Height,
-            Win32.SWP_NOACTIVATE | Win32.SWP_SHOWWINDOW);
+            Win32.SWP_NOACTIVATE);
 
         // 창 안의 그리기는 이 프레임의 좌상단을 원점으로 한다.
         OriginInVirtualScreen = new Point(frame.X, frame.Y);
