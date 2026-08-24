@@ -135,6 +135,18 @@ public class ScreenSpaceTests
     }
 
     [Fact]
+    public void TheCeilingIsThatDisplaysOwnTopNotTheBoundingBoxTop()
+    {
+        // 경계 상자의 top은 세로 모니터 때문에 -407이다. 주 모니터 위에서는
+        // 0이어야 한다 — 아니면 최대화된 창(윗변 0)이 "머리 위 여유 충분"으로
+        // 판정돼 펫이 화면 위로 넘어간 채로 선다.
+        var staircase = Staircase();
+        Assert.Equal(-407, staircase.RoamableArea.Top);
+        Assert.Equal(0, staircase.CeilingY(new Point(500, 500)));
+        Assert.Equal(-407, staircase.CeilingY(new Point(2400, 500)));
+    }
+
+    [Fact]
     public void EmptyDisplayListIsRefused()
     {
         Assert.Throws<ArgumentException>(() => new ScreenSpace([], []));

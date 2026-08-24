@@ -99,6 +99,18 @@ public sealed record ScreenSpace
         return WorkingAreas[index].Bottom;
     }
 
+    /// 그 지점이 속한 화면의 위쪽 끝.
+    ///
+    /// RoamableArea.Top(경계 상자)을 쓰면 안 된다. 세로 모니터가 위로 어긋나
+    /// 붙어 있으면 경계 상자의 top이 주 모니터보다 한참 위라, 주 모니터에서
+    /// 최대화된 창(윗변 y=0)조차 "머리 위 여유가 충분하다"로 판정된다 —
+    /// 거기 세운 펫은 몸이 화면 위로 넘어가 보이지 않는다.
+    public double CeilingY(Point point)
+    {
+        var index = IndexOfScreenContaining(point);
+        return WorkingAreas[index].Top;
+    }
+
     private int IndexOfScreenContaining(Point point)
     {
         for (var i = 0; i < ScreenBoundsList.Count; i++)

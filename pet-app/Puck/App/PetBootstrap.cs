@@ -8,6 +8,7 @@ using Puck.Movement;
 using Puck.Movement.States;
 using Puck.Overlay;
 using Puck.Settings;
+using Puck.WindowSensing;
 
 namespace Puck.App;
 
@@ -27,6 +28,8 @@ public sealed class PetBootstrap : IDisposable
     private ScreenSpace? _screens;
     private ReactDragState? _drag;
     private TrayIcon? _tray;
+    private WindowListWatcher? _windows;
+    private Puck.Interop.WinEventHook? _foreground;
     private bool _wasPressed;
 
     public PetBootstrap(SettingsStore settings) => _settings = settings;
@@ -41,6 +44,12 @@ public sealed class PetBootstrap : IDisposable
             onOpenCustomisationFolder: OpenCustomisationFolder,
             onReloadAvatar: ReloadAvatar,
             onQuit: () => Application.Current.Shutdown());
+
+        // 창을 먼저 보기 시작한다 — 첫 프레임에 이미 목록이 있어야 펫이
+        // 바닥에서 시작했다가 창 위로 튀어 오르지 않는다.
+        _windows = WindowListWatcher.CreateDefault();
+        _windows.Start();
+        _foreground = new Puck.Interop.WinEventHook(() => _windows?.NoteForegroundChanged());
 
         _window = new PetOverlayWindow();
         _window.Show();
@@ -139,12 +148,29 @@ public sealed class PetBootstrap : IDisposable
         AvatarHeight = _avatar!.Size.Height,
         VisualBounds = _body!.VisualBounds,
         WalkSpeed = MovementSolver.WalkSpeed * _settings.MovementSpeedMultiplier,
-        LandingY = _screens.FloorY,
+        LandingY = LandingY,
         HasGroundUnder = _screens.HasGroundUnder,
         SnapToGround = _screens.NearestStandablePoint,
         LedgeBeyond = _screens.LedgeBeyond,
         RequestTransition = _ => { },   // CharacterController가 자기 것으로 갈아 끼운다
     };
+
+    /// 곧장 아래로 떨어지면 무엇에 닿는가. Phase 1에서는 언제나 화면 바닥이었고,
+    /// 이제 창 윗면이 그 사이에 끼어든다 — StateContext.LandingY가 클로저인 덕분에
+    /// 상태 코드는 한 줄도 바뀌지 않는다.
+    private double LandingY(Point point)
+    {
+        var floor = _screens!.FloorY(point);
+        if (_windows is null || _avatar is null) return floor;
+
+        return LandingSurfaceResolver.LandingY(
+            point.X, point.Y, _windows.Windows, floor,
+            // 그 화면 자신의 위쪽 끝이어야 한다. 경계 상자의 top을 넘기면
+            // 주 모니터에서 최대화된 창(윗변 0)까지 발판으로 판정돼, 거기 선
+            // 펫의 몸이 화면 위로 넘어가 보이지 않는다.
+            roamableTop: _screens.CeilingY(point),
+            avatarHeight: _avatar.Size.Height);
+    }
 
     private void OnFrame(double dt)
     {
@@ -214,6 +240,8 @@ public sealed class PetBootstrap : IDisposable
     public void Dispose()
     {
         _clock.Stop();
+        _foreground?.Dispose();
+        _windows?.Dispose();
         _tray?.Dispose();
         _window?.Close();
     }
