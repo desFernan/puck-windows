@@ -1,5 +1,7 @@
 # Puck for Windows
 
+> Language: **English** (here) · [한국어](README.ko.md)
+
 > A Windows port of [**desFernan/puck-mac**](https://github.com/desFernan/puck-mac)
 > (Swift/AppKit, macOS). C# / .NET 8 + WPF.
 >
