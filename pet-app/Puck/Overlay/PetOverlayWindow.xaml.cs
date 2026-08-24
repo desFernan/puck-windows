@@ -14,8 +14,17 @@ public partial class PetOverlayWindow : Window
     public PetOverlayWindow()
     {
         InitializeComponent();
+        Root.Children.Add(Sprite);
         SourceInitialized += OnSourceInitialized;
+        DpiScaleChanged += scale =>
+        {
+            Sprite.DpiScale = scale;
+            Sprite.Invalidate();
+        };
     }
+
+    /// 이 창이 그리는 유일한 것.
+    public SpriteView Sprite { get; } = new();
 
     /// 지금 이 창이 올라가 있는 모니터의 배율 (1.0 = 96 DPI).
     public double DpiScale { get; private set; } = 1.0;
@@ -50,6 +59,11 @@ public partial class PetOverlayWindow : Window
 
         // 창 안의 그리기는 이 프레임의 좌상단을 원점으로 한다.
         OriginInVirtualScreen = new Point(frame.X, frame.Y);
+        Sprite.OriginInVirtualScreen = OriginInVirtualScreen;
+        Sprite.DpiScale = DpiScale;
+        Sprite.Width = frame.Width / DpiScale;
+        Sprite.Height = frame.Height / DpiScale;
+        Sprite.Invalidate();
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
