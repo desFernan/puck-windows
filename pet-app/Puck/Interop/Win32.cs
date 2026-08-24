@@ -93,6 +93,44 @@ internal static partial class Win32
     [LibraryImport("dwmapi.dll", EntryPoint = "DwmGetWindowAttribute")]
     public static partial int DwmGetWindowAttributeRect(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
 
+    // --- 화면 캡처 ---
+
+    public const int SRCCOPY = 0x00CC0020;
+
+    /// 이게 없으면 레이어드 창이 캡처에서 빠진다 — 펫 자신이 레이어드 창이다.
+    public const int CAPTUREBLT = 0x40000000;
+
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr GetDesktopWindow();
+
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr GetWindowDC(IntPtr hWnd);
+
+    [LibraryImport("user32.dll")]
+    public static partial int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial IntPtr CreateCompatibleDC(IntPtr hdc);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial IntPtr CreateCompatibleBitmap(IntPtr hdc, int cx, int cy);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial IntPtr SelectObject(IntPtr hdc, IntPtr h);
+
+    [LibraryImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool DeleteObject(IntPtr ho);
+
+    [LibraryImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool DeleteDC(IntPtr hdc);
+
+    [LibraryImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BitBlt(IntPtr hdc, int x, int y, int cx, int cy,
+                                      IntPtr hdcSrc, int x1, int y1, int rop);
+
     // --- 전역 핫키 ---
 
     public const int WM_HOTKEY = 0x0312;
