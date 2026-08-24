@@ -15,8 +15,7 @@
 **지금 상태: Phase 0 + Phase 1 완료 — 펫이 화면 위를 걷는다.**
 투명·항상 위·클릭스루 오버레이에 아바타가 뜨고, 물리와 상태기계가 돌고,
 클릭·드래그·던지기가 되고, 작업표시줄 위에 착지한다. mac에서 만든 아바타
-폴더를 그대로 읽는다. 에이전트·채팅 창·에디터·터미널은 Phase 2~6이다 —
-단계 계획은 [`docs/porting-design.md`](docs/porting-design.md)에.
+폴더를 그대로 읽는다. 에이전트·채팅 창·에디터·터미널은 Phase 2~6이다.
 
 ## 빌드
 
@@ -37,10 +36,10 @@ pet-app\scripts\test.ps1   # xUnit, 무인 실행
 
 ## 에이전트 프로바이더
 
-Windows에는 아직 없다 — 채팅, 도구 실행, ACP 기반 코드 에디터는 Phase 2+이고
-[`docs/porting-design.md`](docs/porting-design.md)의 설계를 따른다. macOS에서는
-Anthropic 또는 OpenAI API와 직접 통신하고, `code_editor`는 `node` 아래에서
-벤더 ACP 에이전트를 돌린다. Windows도 같은 방식이 될 예정이다.
+Windows에는 아직 없다 — 채팅, 도구 실행, ACP 기반 코드 에디터는 Phase 2+이다.
+macOS에서는 Anthropic 또는 OpenAI API와 직접 통신하고, `code_editor`는
+`node` 아래에서 벤더 ACP 에이전트를 돌린다. Windows도 같은 방식이 될
+예정이다.
 
 ## 내 것으로 만들기
 
@@ -84,14 +83,6 @@ Avatars\my-pet\
 **Windows에서 새/수정된 아바타 불러오기:** 폴더를 `Avatars\`에 넣고 트레이
 메뉴의 "아바타 다시 불러오기"를 누른다 — 재시작 불필요, macOS의 다시
 불러오기 버튼과 동일하다.
-
-## 문서
-
-- [`docs/porting-design.md`](docs/porting-design.md) — 스택 선택, 모듈별 이식 지도,
-  단계 계획, Windows가 일부러 다르게 가는 네 가지
-- [`docs/plans/`](docs/plans) — 단계별 구현 플랜
-- [`docs/decisions.md`](docs/decisions.md) — 구현하면서 플랜과 갈라진 지점
-- [`docs/verification.md`](docs/verification.md) — 자동화하지 않는 수동 검증 항목
 
 ## 커뮤니티
 

@@ -17,8 +17,7 @@ us. Come say hi!
 A transparent, always-on-top, click-through overlay shows the avatar; physics
 and the state machine are running; click, drag and throw work; it lands on
 the taskbar. It reads avatar folders made on macOS as-is. The agent, chat
-window, editor and terminal are Phase 2–6 — see
-[`docs/porting-design.md`](docs/porting-design.md) for the phase plan.
+window, editor and terminal are Phase 2–6.
 
 ## Build
 
@@ -40,10 +39,9 @@ Unattended, exits nonzero on any failure.
 ## Agent providers
 
 Not built yet on Windows — chat, tool execution and the ACP-backed code
-editor are Phase 2+ and follow the design in
-[`docs/porting-design.md`](docs/porting-design.md). On macOS these talk to
-the Anthropic or OpenAI API directly, with `code_editor` running a vendored
-ACP agent under `node`; Windows is expected to work the same way once built.
+editor are Phase 2+. On macOS these talk to the Anthropic or OpenAI API
+directly, with `code_editor` running a vendored ACP agent under `node`;
+Windows is expected to work the same way once built.
 
 ## Making it your own
 
@@ -87,17 +85,6 @@ applies here without changes.
 **Loading a new or edited avatar on Windows:** drop the folder into
 `Avatars\`, then use "Reload avatars" in the tray menu — no restart needed,
 same as macOS's reload button.
-
-## Docs
-
-- [`docs/porting-design.md`](docs/porting-design.md) — stack choice,
-  module-by-module port map, phase plan, the four places Windows
-  deliberately differs
-- [`docs/plans/`](docs/plans) — per-phase implementation plans
-- [`docs/decisions.md`](docs/decisions.md) — where the build diverged from
-  the plan
-- [`docs/verification.md`](docs/verification.md) — manual checks that aren't
-  automated
 
 ## Community
 
