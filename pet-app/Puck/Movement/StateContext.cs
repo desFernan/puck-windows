@@ -1,4 +1,5 @@
 using System.Windows;
+using Puck.WindowSensing;
 
 namespace Puck.Movement;
 
@@ -39,6 +40,13 @@ public sealed class StateContext
     /// (위치, 진행 방향, 그림 외곽선) -> 타고 올라갈 수 있는 턱 위의 설 자리.
     /// 없으면 null. 낮은 화면에서 높은 화면으로 돌아가는 유일한 걸음이다.
     public required Func<Point, double, Rect, Point?> LedgeBeyond { get; init; }
+
+    /// 지금 화면에 있는 창들, 앞에서 뒤 순서. 착지면·벽·발판이 전부 여기서 나온다.
+    public required IReadOnlyList<WindowInfo> Windows { get; init; }
+
+    /// 오르지 않기로 한 창들. 설정의 "포커스된 창 위로는 올라가지 않기"가
+    /// 여기로 들어온다 — 그 창은 벽이 아니라 없는 것처럼 지나친다.
+    public ISet<IntPtr>? UnclimbableWindows { get; init; }
 
     /// 이 프레임이 끝난 뒤 다른 상태로 가 달라는 요청. 즉시가 아니라
     /// 지연되는 이유는, 어떤 상태도 자기 update 도중에 컨트롤러를

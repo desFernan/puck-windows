@@ -121,6 +121,8 @@ public sealed class PetBootstrap : IDisposable
             [StateKind.Fall] = new FallState(),
             [StateKind.Land] = new LandState(),
             [StateKind.ClimbLedge] = ledge,
+            [StateKind.Climb] = new ClimbState(),
+            [StateKind.WalkOnTop] = new WalkOnTopState(),
             [StateKind.ReactClick] = new ReactClickState(),
             [StateKind.ReactDrag] = _drag,
         };
@@ -152,8 +154,22 @@ public sealed class PetBootstrap : IDisposable
         HasGroundUnder = _screens.HasGroundUnder,
         SnapToGround = _screens.NearestStandablePoint,
         LedgeBeyond = _screens.LedgeBeyond,
+        Windows = _windows?.Windows ?? [],
+        UnclimbableWindows = UnclimbableWindows(),
         RequestTransition = _ => { },   // CharacterController가 자기 것으로 갈아 끼운다
     };
+
+    /// 설정의 "포커스된 창 위로는 올라가지 않기". 사람이 지금 쓰고 있는 창
+    /// 위로 펫이 기어오르면 방해가 된다 — 그 창은 벽이 아니라 없는 것처럼 지나친다.
+    private ISet<IntPtr>? UnclimbableWindows()
+    {
+        if (!_settings.AvoidFocusedWindow || _windows is null) return null;
+
+        var foreground = Interop.Win32.GetForegroundWindow();
+        Interop.Win32.GetWindowThreadProcessId(foreground, out var pid);
+        var focused = WindowSupport.FocusedWindow((int)pid, _windows.Windows);
+        return focused is null ? null : new HashSet<IntPtr> { focused.Handle };
+    }
 
     /// 곧장 아래로 떨어지면 무엇에 닿는가. Phase 1에서는 언제나 화면 바닥이었고,
     /// 이제 창 윗면이 그 사이에 끼어든다 — StateContext.LandingY가 클로저인 덕분에

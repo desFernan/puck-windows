@@ -57,6 +57,8 @@ public sealed class CharacterController
             HasGroundUnder = source.HasGroundUnder,
             SnapToGround = source.SnapToGround,
             LedgeBeyond = source.LedgeBeyond,
+            Windows = source.Windows,
+            UnclimbableWindows = source.UnclimbableWindows,
             RequestTransition = Request,
         };
 

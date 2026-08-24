@@ -37,6 +37,25 @@ public sealed class WalkState : IStateHandler
         var facing = MovementSolver.FacingToward(body.Position, new Point(_target, body.Position.Y));
         if (facing is not null) body.Facing = facing.Value;
 
+        // 앞을 막은 창이 오르기를 시작한다 — 펫은 창을 통과하지 않고 그 옆면까지
+        // 걸어가서 붙잡는다. 화면 턱보다 먼저 보는 이유는 눈앞에 있는 것이
+        // 그것이기 때문이다.
+        var blocking = WindowSupport.BlockingWindow(
+            body.Position, new Point(_target, body.Position.Y), context.Windows,
+            roamableTop: context.RoamableArea.Top,
+            avatarHeight: context.AvatarHeight,
+            excluding: context.UnclimbableWindows);
+
+        if (blocking is not null)
+        {
+            var edgeX = _target > body.Position.X ? blocking.Frame.Left : blocking.Frame.Right;
+            var toEdge = MovementSolver.StepToward(
+                body.Position, new Point(edgeX, body.Position.Y), dt, context.WalkSpeed);
+            body.Position = toEdge.Position;
+            if (toEdge.HasArrived) context.RequestTransition(StateKind.Climb);
+            return;
+        }
+
         var next = PetBounds.Contain(step.Position, context.VisualBounds, context.RoamableArea);
 
         // RoamableArea는 경계 상자라 디스플레이 사이의 빈 공간도 포함한다.

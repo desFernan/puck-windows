@@ -2,6 +2,7 @@ using System.Windows;
 using Puck.Avatar;
 using Puck.Movement;
 using Puck.Movement.States;
+using Puck.WindowSensing;
 
 namespace PuckTests.Movement;
 
@@ -13,7 +14,8 @@ public class StatesTests
     private static (StateContext Context, CharacterBody Body, List<StateKind> Requested)
         MakeContext(Point start, Func<Point, double>? landingY = null,
                     Func<Point, bool>? hasGroundUnder = null,
-                    Func<Point, double, Rect, Point?>? ledgeBeyond = null)
+                    Func<Point, double, Rect, Point?>? ledgeBeyond = null,
+                    IReadOnlyList<WindowInfo>? windows = null)
     {
         var body = new CharacterBody(new FakeAvatar { VisualBounds = Pet }, start);
         var requested = new List<StateKind>();
@@ -28,6 +30,7 @@ public class StatesTests
             HasGroundUnder = hasGroundUnder ?? (_ => true),
             SnapToGround = (p, _) => p,
             LedgeBeyond = ledgeBeyond ?? ((_, _, _) => null),
+            Windows = windows ?? [],
             RequestTransition = requested.Add,
         };
         return (context, body, requested);

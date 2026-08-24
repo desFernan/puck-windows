@@ -49,6 +49,7 @@ public class CharacterControllerTests
             HasGroundUnder = hasGroundUnder ?? (_ => true),
             SnapToGround = snapToGround ?? ((p, _) => p),
             LedgeBeyond = (_, _, _) => null,
+            Windows = [],
             RequestTransition = _ => { },
         });
     }
