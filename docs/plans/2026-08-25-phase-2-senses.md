@@ -233,9 +233,12 @@ Phase 1의 `HasGroundUnder`/`SnapToGround`(디스플레이 사이 빈 공간 방
   `Fall`로 간다. 창은 사람이 언제든 닫는다.
 
 **Steps**
-- [ ] 실패 테스트: 오르다 창이 사라지면 Fall / 윗변에 닿으면 WalkOnTop /
-      WalkOnTop 중 창이 움직이면 따라가거나 떨어진다 / 천장은 위아래가 뒤집힌다
-- [ ] 구현 → 통과 → 커밋: `feat: climb windows, walk on their top edges`
+- [x] 실패 테스트: 오르다 창이 사라지면 Fall / 윗변에 닿으면 WalkOnTop /
+      끝까지 걸으면 Fall / 화면 끝에 닿은 창에서는 돌아선다
+- [x] 구현 → 통과 → 커밋: `feat: climb windows, walk on their top edges`
+
+**천장은 뺐다.** `CeilingState`/`ClimbToCeilingState`는 완료 조건에 없고 같은
+기계 위의 장식이라 미룬다 — 이유는 `docs/decisions.md`에.
 
 ---
 
@@ -426,6 +429,10 @@ Test: `PuckTests/Audio/SoundTableTests.cs`
 - 커밋: `feat: wire the senses into the pet`
 
 ---
+
+# 진행 상태 (2026-08-25)
+
+Task 1~14 전부 끝. 천장 기어다니기만 의도적으로 뺐다(위 Task 5).
 
 # Phase 2 완료 조건
 
