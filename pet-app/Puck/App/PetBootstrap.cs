@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using Puck.Agent;
 using Puck.Audio;
 using Puck.Avatar;
 using Puck.Diagnostics;
@@ -10,6 +11,7 @@ using Puck.Movement;
 using Puck.Movement.States;
 using Puck.Overlay;
 using Puck.Pointing;
+using Puck.Tools;
 using Puck.Settings;
 using Puck.WindowSensing;
 
@@ -39,6 +41,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     private ClickDetector? _mouse;
     private SfxPlayer? _sfx;
     private SoundTable? _sounds;
+    private AgentRunner? _agent;
     private readonly PendingPointTracker _pending = new();
     private Puck.Interop.WinEventHook? _foreground;
 
@@ -93,6 +96,21 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         _mouse.Pressed += OnMousePressed;
         _mouse.Moved += (p, t) => _gestures.OnMouseMove(p, t);
         _mouse.Released += OnMouseReleased;
+
+        // 에이전트. 도구는 Phase 2의 감각을 그대로 물고, 설정은 매 요청마다
+        // 다시 읽는다 — .env에 키를 넣은 사람이 앱을 끄지 않아도 되게.
+        var registry = ToolRegistry.CreateDefault(
+            windows: () => _windows?.Windows ?? [],
+            virtualScreen: () => _screens?.Bounds ?? new Rect(0, 0, 1920, 1080),
+            pointAt: PointPetAt);
+
+        _agent = new AgentRunner(
+            new AnthropicAgentClient(AgentConfiguration.FromDisk),
+            registry,
+            new ToolApprovals(new DenyingApprovalPrompt()),
+            AgentConfiguration.FromDisk);
+
+        _agent.Progress += OnAgentProgress;
 
         RegisterHotkeys();
 
@@ -222,12 +240,54 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         if (_bubble is null)
         {
             _bubble = new TextInputBubbleWindow();
-            _bubble.Submitted += text =>
-                AppLogger.Log(LogLevel.Info, "input", "입력 버블에서 문장을 받았습니다",
-                    new Dictionary<string, object?> { ["text"] = text });
+            _bubble.Submitted += text => _ = AskAgentAsync(text);
         }
 
         _bubble.ShowAt(BubbleOrigin());
+    }
+
+    /// 사람이 버블에 적은 것을 에이전트에게 넘긴다.
+    ///
+    /// 답이 올 때까지 기다리는 동안에도 펫은 계속 돌아다녀야 하므로 기다리지
+    /// 않는다. 대화 UI는 Phase 4라, 지금 답은 로그로 간다.
+    private async Task AskAgentAsync(string text)
+    {
+        if (_agent is null) return;
+
+        try
+        {
+            var answer = await _agent.AskAsync(text);
+            AppLogger.Log(LogLevel.Info, "agent", "펫이 답했습니다",
+                new Dictionary<string, object?> { ["asked"] = text, ["answer"] = answer });
+        }
+        catch (Exception ex)
+        {
+            // 여기서 던지면 아무도 잡지 않는다(async void 자리) — 앱이 통째로 죽는다.
+            AppLogger.Error("agent", "대화가 실패했습니다",
+                new Dictionary<string, object?> { ["error"] = ex.Message });
+        }
+    }
+
+    /// 에이전트가 진행 중임을 펫의 몸으로 보여 준다.
+    private void OnAgentProgress(AgentEvent progress)
+    {
+        if (progress is AgentEvent.UsingTool using_)
+            AppLogger.Log(LogLevel.Debug, "agent", "도구를 씁니다",
+                new Dictionary<string, object?> { ["tool"] = using_.Name });
+    }
+
+    /// point_at 도구가 부르는 곳. 펫이 실제로 거기로 걸어가 가리키고, 그 뒤의
+    /// 클릭은 "가리킨 그것을 눌렀다"로 친다.
+    private void PointPetAt(Point target)
+    {
+        if (_moveTo is null || _controller is null || _screens is null) return;
+
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            _pending.Point(target, _stopwatch.Elapsed.TotalSeconds);
+            _moveTo.Target = new Point(target.X, LandingY(target));
+            _controller.Request(StateKind.MoveTo);
+        });
     }
 
     /// 펫 머리 위. 프레임마다 다시 계산해서 펫이 걸으면 따라간다.

@@ -34,6 +34,7 @@
     mac의 SFXPlayer는 그 셋을 다 한다(플레이어 노드 풀).
   -->
   <ItemGroup>
+    <PackageReference Include="Anthropic" Version="12.42.0" />
     <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
 

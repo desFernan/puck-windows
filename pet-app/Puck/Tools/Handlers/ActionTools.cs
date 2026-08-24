@@ -147,8 +147,10 @@ public sealed class RunPowerShellHandler(string toolName, string argumentName) :
         {
             // -NoProfile: 사람의 프로필이 출력이나 동작을 바꾸면 결과를 믿을 수 없다.
             // -NonInteractive: 프롬프트가 뜨면 아무도 답할 수 없어 타임아웃까지 멈춘다.
-            Arguments = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command -",
-            RedirectStandardInput = true,
+            // -EncodedCommand: 명령을 UTF-16LE base64로 넘긴다. 표준 입력이나
+            //   -Command 문자열로 주면 Windows PowerShell이 콘솔 코드페이지로
+            //   읽어서 한글이 깨진다("안녕"이 "?�녕"으로 갔다).
+            Arguments = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand " + Encode(script),
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -159,11 +161,6 @@ public sealed class RunPowerShellHandler(string toolName, string argumentName) :
 
         using var process = Process.Start(start)
             ?? throw new InvalidOperationException("powershell.exe를 띄우지 못했습니다.");
-
-        // 명령을 인자로 넘기는 대신 표준 입력으로 준다 — 따옴표와 특수문자를
-        // 셸 인자 규칙에 맞춰 다시 이스케이프할 필요가 없다.
-        await process.StandardInput.WriteAsync(script);
-        process.StandardInput.Close();
 
         var stdout = process.StandardOutput.ReadToEndAsync(cancellation);
         var stderr = process.StandardError.ReadToEndAsync(cancellation);
@@ -181,7 +178,7 @@ public sealed class RunPowerShellHandler(string toolName, string argumentName) :
         }
 
         var output = (await stdout).TrimEnd();
-        var error = (await stderr).TrimEnd();
+        var error = PowerShellErrorStream.Clean(await stderr);
 
         var report = new StringBuilder();
         report.Append("종료 코드 ").Append(process.ExitCode);
@@ -190,6 +187,19 @@ public sealed class RunPowerShellHandler(string toolName, string argumentName) :
         if (output.Length == 0 && error.Length == 0) report.Append("\n(출력 없음)");
 
         return report.ToString();
+    }
+
+    /// 나가는 쪽은 -EncodedCommand로, 돌아오는 쪽은 앞머리에서 출력 인코딩을
+    /// UTF-8로 바꿔서 맞춘다. 둘 중 하나만 하면 여전히 깨진다.
+    private static string Encode(string script)
+    {
+        // $ProgressPreference: stderr가 리다이렉트돼 있으면 Windows PowerShell이
+        // 진행률 레코드를 CLIXML로 직렬화해 stderr에 쏟는다. 그걸 그대로 두면
+        // 성공한 명령마다 "오류" 덩어리가 모델에게 간다.
+        const string preamble =
+            "$ProgressPreference = 'SilentlyContinue'\n" +
+            "$OutputEncoding = [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)\n";
+        return Convert.ToBase64String(Encoding.Unicode.GetBytes(preamble + script));
     }
 
     /// 모델의 창을 명령 하나의 출력으로 채우지 않는다.

@@ -40,6 +40,10 @@ public static class AgentPrompts
         macOS의 AppleScript가 하던 앱 자동화는 Windows에서 COM이 맡고, COM은
         PowerShell에서 나온다.
 
+        여기 PowerShell은 Windows PowerShell 5.1이다. `&&`와 `||`는 없고,
+        `&`는 예약 문자라 그냥 쓰면 파서 오류가 난다. 명령을 잇고 싶으면
+        `;`를 쓰거나 `if ($?) { ... }`로 쓴다.
+
         # 할 수 없는 일
 
         관리자 권한으로 실행된 창은 조작할 수 없다(UIPI). 그런 창에서는 클릭이
