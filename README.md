@@ -1,7 +1,15 @@
 # Puck for Windows
 
-[**desFernan/puck-mac**](https://github.com/desFernan/puck-mac)(Swift/AppKit, macOS)의
-Windows 이식. C# / .NET 8 + WPF.
+> [**desFernan/puck-mac**](https://github.com/desFernan/puck-mac)(Swift/AppKit, macOS)의
+> Windows 이식. C# / .NET 8 + WPF.
+>
+> Platforms: [macOS](https://github.com/desFernan/puck-mac) · **Windows** (here) · [Linux](https://github.com/desFernan/puck-linux)
+
+### 💬 [Join the Discord](https://discord.gg/ePBZVnwSYE)
+
+Bugs, feature requests, build help, or just want to hang out — the
+[support server](https://discord.gg/ePBZVnwSYE) is the fastest way to reach
+us. Come say hi!
 
 **지금 상태: Phase 0 + Phase 1 완료 — 펫이 화면 위를 걷는다.**
 투명·항상 위·클릭스루 오버레이에 아바타가 뜨고, 물리와 상태기계가 돌고,
@@ -40,3 +48,8 @@ dotnet run --project pet-app\Puck\Puck.csproj # 펫 띄우기
 - [`docs/plans/`](docs/plans) — 단계별 구현 플랜
 - [`docs/decisions.md`](docs/decisions.md) — 구현하면서 플랜과 갈라진 지점
 - [`docs/verification.md`](docs/verification.md) — 자동화하지 않는 수동 검증 항목
+
+## Community
+
+Want to help plan the Windows port, or just curious about progress — join us
+on **[Discord](https://discord.gg/ePBZVnwSYE)**.
