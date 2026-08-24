@@ -12,6 +12,8 @@
       the manifest is the only place PerMonitorV2 can be declared before any window exists.
     -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
+    <!-- [LibraryImport]의 소스 생성기가 unsafe 코드를 내놓는다 (SYSLIB1062). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <!--
