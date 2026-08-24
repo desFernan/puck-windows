@@ -45,4 +45,48 @@ internal static partial class Win32
     public static partial short GetAsyncKeyState(int vKey);
 
     public const int VK_LBUTTON = 0x01;
+
+    // --- 창 열거 (WindowSensing) ---
+
+    public const int GWL_STYLE = -16;
+    public const int WS_VISIBLE = unchecked((int)0x10000000);
+
+    /// DWM이 이 창을 "화면에 없음"으로 표시했는가. 0이 아니면 클로킹된 창이다.
+    public const int DWMWA_CLOAKED = 14;
+
+    /// 창의 진짜 시각적 사각형. GetWindowRect는 리사이즈용 투명 여백까지
+    /// 포함해서, 그 값으로 착지면을 잡으면 펫이 창 위에 붕 떠 보인다.
+    public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
+
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool IsWindowVisible(IntPtr hWnd);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [LibraryImport("user32.dll", EntryPoint = "GetWindowTextW", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int GetWindowText(IntPtr hWnd, [Out] char[] lpString, int nMaxCount);
+
+    [LibraryImport("user32.dll", EntryPoint = "GetWindowTextLengthW")]
+    public static partial int GetWindowTextLength(IntPtr hWnd);
+
+    [LibraryImport("user32.dll")]
+    public static partial uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [LibraryImport("dwmapi.dll")]
+    public static partial int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out int pvAttribute, int cbAttribute);
+
+    [LibraryImport("dwmapi.dll", EntryPoint = "DwmGetWindowAttribute")]
+    public static partial int DwmGetWindowAttributeRect(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
 }
