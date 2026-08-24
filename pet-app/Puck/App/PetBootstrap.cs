@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using Puck.Avatar;
 using Puck.Diagnostics;
+using Puck.Input;
 using Puck.Localization;
 using Puck.Movement;
 using Puck.Movement.States;
@@ -30,6 +31,8 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     private TrayIcon? _tray;
     private WindowListWatcher? _windows;
     private WalkState? _walk;
+    private MoveToState? _moveTo;
+    private GlobalHotkeyManager? _hotkeys;
     private Puck.Interop.WinEventHook? _foreground;
     private bool _wasPressed;
 
@@ -70,6 +73,8 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             _body.LaunchVelocity = velocity;
             _controller?.Request(StateKind.Fall);
         };
+
+        RegisterHotkeys();
 
         _clock.Tick += OnFrame;
         _clock.Start();
@@ -116,6 +121,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         var ledge = new ClimbLedgeState();
         _walk = new WalkState { Ledge = ledge };
+        _moveTo = new MoveToState();
         var states = new Dictionary<StateKind, IStateHandler>
         {
             [StateKind.Idle] = new IdleState(new WanderScheduler()) { Wander = this },
@@ -124,6 +130,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             [StateKind.Land] = new LandState(),
             [StateKind.ClimbLedge] = ledge,
             [StateKind.Climb] = new ClimbState(),
+            [StateKind.MoveTo] = _moveTo,
             [StateKind.WalkOnTop] = new WalkOnTopState(),
             [StateKind.ReactClick] = new ReactClickState(),
             [StateKind.ReactDrag] = _drag,
@@ -160,6 +167,42 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         UnclimbableWindows = UnclimbableWindows(),
         RequestTransition = _ => { },   // CharacterController가 자기 것으로 갈아 끼운다
     };
+
+    /// 전역 핫키. 지금은 "펫 부르기"만 물린다 — 음성(PTT)과 입력 버블은
+    /// 각각 Phase 6과 이 Phase의 뒤쪽 태스크가 채운다.
+    private void RegisterHotkeys()
+    {
+        _hotkeys = new GlobalHotkeyManager();
+        _hotkeys.RegisterAll(HotkeyBindings.Defaults, new Dictionary<string, Action>
+        {
+            [nameof(HotkeyBindings.SummonPet)] = SummonToCursor,
+        });
+
+        if (_hotkeys.Unavailable.Count > 0)
+            AppLogger.Warning("hotkey", "다른 프로그램이 이미 쓰고 있어 등록하지 못한 핫키가 있습니다",
+                new Dictionary<string, object?> { ["names"] = string.Join(", ", _hotkeys.Unavailable) });
+    }
+
+    /// 커서 쪽으로 오라고 한다. 커서가 창 위면 그 창의 윗변에 자리를 잡고,
+    /// 아니면 커서 아래의 착지면으로 간다 — 부른 사람이 보고 있는 곳이 거기다.
+    private void SummonToCursor()
+    {
+        if (_body is null || _controller is null || _moveTo is null || _avatar is null || _screens is null) return;
+
+        var cursor = PetOverlayWindow.CursorPosition;
+        var covering = _windows is null
+            ? null
+            : WindowSupport.CoveringWindow(cursor, _avatar.Size.Height, _windows.Windows);
+
+        var perch = covering is null ? null : WindowSupport.PerchTarget(
+            covering, cursor,
+            roamableTop: _screens.CeilingY(cursor),
+            avatarHeight: _avatar.Size.Height,
+            petHalfWidth: _avatar.Size.Width / 2);
+
+        _moveTo.Target = perch ?? new Point(cursor.X, LandingY(cursor));
+        _controller.Request(StateKind.MoveTo);
+    }
 
     /// 배회 타이머가 찼다. 창 목록을 아는 건 여기뿐이라 "저 창을 타고 오르자"는
     /// 결정이 여기서 나온다.
@@ -298,6 +341,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     public void Dispose()
     {
         _clock.Stop();
+        _hotkeys?.Dispose();
         _foreground?.Dispose();
         _windows?.Dispose();
         _tray?.Dispose();

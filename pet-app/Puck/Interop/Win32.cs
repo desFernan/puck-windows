@@ -93,6 +93,21 @@ internal static partial class Win32
     [LibraryImport("dwmapi.dll", EntryPoint = "DwmGetWindowAttribute")]
     public static partial int DwmGetWindowAttributeRect(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
 
+    // --- 전역 핫키 ---
+
+    public const int WM_HOTKEY = 0x0312;
+
+    /// 메시지만 받는 창의 부모. 화면에 뜨지도, 포커스를 갖지도 않는다.
+    public static readonly IntPtr HWND_MESSAGE = new(-3);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool UnregisterHotKey(IntPtr hWnd, int id);
+
     // --- 포그라운드 변경 알림 ---
 
     public const uint EVENT_SYSTEM_FOREGROUND = 0x0003;

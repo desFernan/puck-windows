@@ -14,6 +14,8 @@ public enum StateKind
     Climb,
     /// 창 윗변 위를 거닌다.
     WalkOnTop,
+    /// 남이 정해 준 곳으로 간다 — 핫키로 부르면 오는 것이 이것이다.
+    MoveTo,
     ReactClick,
     ReactDrag,
 }
