@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>Puck</AssemblyName>
+    <RootNamespace>Puck</RootNamespace>
+    <!--
+      WFAC010 tells WinForms apps to move DPI config out of app.manifest and into
+      Application.SetHighDpiMode. That is a WinForms-host API; this is a WPF host, so
+      the manifest is the only place PerMonitorV2 can be declared before any window exists.
+    -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    WPF is the primary UI framework here; WinForms is on only for NotifyIcon and
+    Screen.AllScreens. Its implicit usings would make Application/Point/Color/Size
+    ambiguous with System.Windows.*, so drop them - WinForms types get an explicit
+    using in the few files that need them.
+  -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+</Project>
