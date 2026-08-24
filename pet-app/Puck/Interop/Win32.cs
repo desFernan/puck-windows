@@ -33,4 +33,16 @@ internal static partial class Win32
 
     [LibraryImport("user32.dll")]
     public static partial uint GetDpiForWindow(IntPtr hWnd);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POINT { public int X; public int Y; }
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetCursorPos(out POINT lpPoint);
+
+    [LibraryImport("user32.dll")]
+    public static partial short GetAsyncKeyState(int vKey);
+
+    public const int VK_LBUTTON = 0x01;
 }

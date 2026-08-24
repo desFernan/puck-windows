@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Interop;
+using Puck.Avatar;
 using Puck.Interop;
 
 namespace Puck.Overlay;
@@ -64,6 +65,33 @@ public partial class PetOverlayWindow : Window
         Sprite.Width = frame.Width / DpiScale;
         Sprite.Height = frame.Height / DpiScale;
         Sprite.Invalidate();
+    }
+
+    /// 그림 위 몇 px까지를 "펫을 눌렀다"로 칠 것인가. 얇은 꼬리나 귀는
+    /// 여유가 없으면 사실상 잡을 수 없다.
+    public const double HitTolerance = 6;
+
+    /// 가상 화면 물리 픽셀 기준 현재 커서 위치.
+    public static Point CursorPosition
+    {
+        get
+        {
+            Win32.GetCursorPos(out var p);
+            return new Point(p.X, p.Y);
+        }
+    }
+
+    public static bool LeftButtonDown => (Win32.GetAsyncKeyState(Win32.VK_LBUTTON) & 0x8000) != 0;
+
+    /// 커서가 그려진 픽셀 위에 있으면 클릭을 받고, 아니면 통과시킨다.
+    ///
+    /// WS_EX_TRANSPARENT가 켜진 창은 마우스 이벤트를 아예 받지 못하므로
+    /// 이 판정은 창의 이벤트가 아니라 전역 커서 위치 폴링으로 한다.
+    public void UpdateClickThrough(SpriteAvatar avatar)
+    {
+        var cursor = CursorPosition;
+        var relative = new Point(cursor.X - avatar.Position.X, cursor.Y - avatar.Position.Y);
+        ClickThrough = !avatar.HitTest(relative, HitTolerance);
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
