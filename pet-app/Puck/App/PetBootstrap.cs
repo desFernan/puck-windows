@@ -8,6 +8,7 @@ using Puck.Localization;
 using Puck.Movement;
 using Puck.Movement.States;
 using Puck.Overlay;
+using Puck.Pointing;
 using Puck.Settings;
 using Puck.WindowSensing;
 
@@ -34,8 +35,9 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     private MoveToState? _moveTo;
     private GlobalHotkeyManager? _hotkeys;
     private TextInputBubbleWindow? _bubble;
+    private ClickDetector? _mouse;
+    private readonly PendingPointTracker _pending = new();
     private Puck.Interop.WinEventHook? _foreground;
-    private bool _wasPressed;
 
     public PetBootstrap(SettingsStore settings) => _settings = settings;
 
@@ -74,6 +76,17 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             _body.LaunchVelocity = velocity;
             _controller?.Request(StateKind.Fall);
         };
+
+        // 오버레이는 대부분의 시간 클릭스루라 마우스 이벤트를 받지 못한다.
+        // Phase 1은 프레임마다 커서와 버튼을 물어봤는데(폴링), 그러면 프레임
+        // 사이에 일어난 클릭을 통째로 놓친다. 저수준 훅이 그 자리를 대신한다.
+        _mouse = new ClickDetector(Application.Current.Dispatcher)
+        {
+            Clock = () => _stopwatch.Elapsed.TotalSeconds,
+        };
+        _mouse.Pressed += OnMousePressed;
+        _mouse.Moved += (p, t) => _gestures.OnMouseMove(p, t);
+        _mouse.Released += OnMouseReleased;
 
         RegisterHotkeys();
 
@@ -312,7 +325,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         // 마지막으로 알던 것을 그대로 쓴다.
         _screens = ScreenSpace.Current() ?? _screens;
 
-        PollMouse();
+        _pending.Expire(_stopwatch.Elapsed.TotalSeconds);
         _controller.Advance(dt);
         _body.UpdateBounce(_avatar.CurrentClipKey, _stopwatch.Elapsed);
 
@@ -324,32 +337,21 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         _window.UpdateClickThrough(_avatar);
     }
 
-    /// 오버레이는 대부분의 시간 WS_EX_TRANSPARENT 상태라 마우스 이벤트를
-    /// 받지 못한다. 그래서 커서와 버튼 상태를 프레임마다 직접 묻는다.
-    private void PollMouse()
+    /// 사람이 눌렀다. 그림 위를 눌렀을 때만 제스처가 시작된다 — 여백을
+    /// 누른 것은 아래 앱에 가야 한다.
+    private void OnMousePressed(Point cursor, double now)
     {
-        var cursor = PetOverlayWindow.CursorPosition;
-        var pressed = PetOverlayWindow.LeftButtonDown;
-        var now = _stopwatch.Elapsed.TotalSeconds;
+        if (_avatar is null) return;
 
-        if (pressed && !_wasPressed)
-        {
-            // 그림 위를 눌렀을 때만 제스처가 시작된다.
-            var relative = new Point(cursor.X - _avatar!.Position.X, cursor.Y - _avatar.Position.Y);
-            if (_avatar.HitTest(relative, PetOverlayWindow.HitTolerance))
-                _gestures.OnMouseDown(cursor, now);
-        }
-        else if (pressed)
-        {
-            _gestures.OnMouseMove(cursor, now);
-        }
-        else if (_wasPressed)
-        {
-            _gestures.OnMouseUp(cursor, now);
-        }
+        // 가리켜 둔 것을 눌렀다면 그건 펫을 잡는 게 아니라 지시를 따른 것이다.
+        if (_pending.Accepts(cursor, now)) return;
 
-        _wasPressed = pressed;
+        var relative = new Point(cursor.X - _avatar.Position.X, cursor.Y - _avatar.Position.Y);
+        if (_avatar.HitTest(relative, PetOverlayWindow.HitTolerance))
+            _gestures.OnMouseDown(cursor, now);
     }
+
+    private void OnMouseReleased(Point cursor, double now) => _gestures.OnMouseUp(cursor, now);
 
     private void ToggleVisible()
     {
@@ -372,6 +374,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     public void Dispose()
     {
         _clock.Stop();
+        _mouse?.Dispose();
         _hotkeys?.Dispose();
         _bubble?.Close();
         _foreground?.Dispose();
