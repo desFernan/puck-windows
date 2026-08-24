@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using Puck.Audio;
 using Puck.Avatar;
 using Puck.Diagnostics;
 using Puck.Input;
@@ -36,6 +37,8 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     private GlobalHotkeyManager? _hotkeys;
     private TextInputBubbleWindow? _bubble;
     private ClickDetector? _mouse;
+    private SfxPlayer? _sfx;
+    private SoundTable? _sounds;
     private readonly PendingPointTracker _pending = new();
     private Puck.Interop.WinEventHook? _foreground;
 
@@ -76,6 +79,9 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             _body.LaunchVelocity = velocity;
             _controller?.Request(StateKind.Fall);
         };
+
+        var focus = new FocusAssistObserver();
+        _sfx = new SfxPlayer { IsMuted = focus.IsQuiet };
 
         // 오버레이는 대부분의 시간 클릭스루라 마우스 이벤트를 받지 못한다.
         // Phase 1은 프레임마다 커서와 버튼을 물어봤는데(폴링), 그러면 프레임
@@ -129,6 +135,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         var start = _body?.Position ?? StartPosition(_screens);
 
         _avatar = avatar;
+        _sounds = SoundTable.From(avatar.Manifest, entry.Directory);
         _body = new CharacterBody(avatar, start,
             bounceIntensity: avatar.BounceIntensityOrDefault);
         _drag = new ReactDragState();
@@ -151,6 +158,14 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         };
 
         _controller = new CharacterController(_body, states, StateKind.Idle, MakeContext);
+
+        // 상태가 바뀌면 그 클립 이름으로 소리를 찾는다. 매니페스트의 sounds
+        // 표가 clips와 같은 키 공간을 쓰기 때문에 이름이 하나로 통한다.
+        _controller.Transitioned += (_, to) =>
+        {
+            if (states.TryGetValue(to, out var handler))
+                _sfx?.Play(_sounds?.FilePath(handler.ClipKey));
+        };
         _window!.Sprite.Avatar = avatar;
     }
 
@@ -375,6 +390,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     {
         _clock.Stop();
         _mouse?.Dispose();
+        _sfx?.Dispose();
         _hotkeys?.Dispose();
         _bubble?.Close();
         _foreground?.Dispose();

@@ -30,6 +30,10 @@ public sealed class SpriteAvatar : IAvatarPlayable
 
     public string PackageDirectory { get; }
 
+    /// 이 아바타의 매니페스트. 사운드 표처럼 같은 패키지를 보는 것들이 쓴다.
+    /// (이름이 Load가 아닌 이유는 아래 정적 팩토리와 겹치기 때문이다.)
+    public AvatarManifest Manifest => _load.Manifest;
+
     /// 디코딩할 가로 픽셀 수. 원본이 이보다 작으면 WIC이 늘려서 디코딩하는데,
     /// 그 경우 메모리 몇백 KB를 더 쓸 뿐이라 원본 크기를 미리 읽어 보는
     /// (파일을 한 번 더 여는) 비용을 치를 값어치가 없다.
