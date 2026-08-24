@@ -44,6 +44,7 @@ public class CharacterControllerTests
             VisualBounds = new Rect(-50, -100, 100, 100),
             WalkSpeed = MovementSolver.WalkSpeed,
             LandingY = _ => 800,
+            HasGroundUnder = _ => true,
             RequestTransition = _ => { },
         });
     }

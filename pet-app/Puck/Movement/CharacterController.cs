@@ -54,6 +54,7 @@ public sealed class CharacterController
             VisualBounds = source.VisualBounds,
             WalkSpeed = source.WalkSpeed,
             LandingY = source.LandingY,
+            HasGroundUnder = source.HasGroundUnder,
             RequestTransition = Request,
         };
 

@@ -52,6 +52,26 @@ public class ScreenSpaceTests
     }
 
     [Fact]
+    public void APointOnADisplayHasGroundUnderIt()
+    {
+        Assert.True(TwoMonitors().HasGroundUnder(new Point(100, 500)));
+        Assert.True(TwoMonitors().HasGroundUnder(new Point(2000, 1024)));
+    }
+
+    [Fact]
+    public void TheGapInAStaircaseLayoutHasNoGroundUnderIt()
+    {
+        // 두 모니터의 높이가 달라서 생기는 계단 자리. 경계 상자(RoamableArea)
+        // 안이지만 어느 디스플레이에도 속하지 않는다 — 여기 선 펫은 안 보인다.
+        var staircase = new ScreenSpace(
+            screenBoundsList: [new Rect(0, 0, 1920, 1080), new Rect(1920, -407, 1080, 1920)],
+            workingAreas: [new Rect(0, 0, 1920, 1032), new Rect(1920, -407, 1080, 1872)]);
+
+        Assert.True(staircase.RoamableArea.Contains(new Point(500, 1465)));
+        Assert.False(staircase.HasGroundUnder(new Point(500, 1465)));
+    }
+
+    [Fact]
     public void EmptyDisplayListIsRefused()
     {
         Assert.Throws<ArgumentException>(() => new ScreenSpace([], []));

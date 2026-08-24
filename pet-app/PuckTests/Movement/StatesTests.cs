@@ -11,7 +11,8 @@ public class StatesTests
     private static readonly Rect Pet = new(-50, -100, 100, 100);
 
     private static (StateContext Context, CharacterBody Body, List<StateKind> Requested)
-        MakeContext(Point start, Func<Point, double>? landingY = null)
+        MakeContext(Point start, Func<Point, double>? landingY = null,
+                    Func<Point, bool>? hasGroundUnder = null)
     {
         var body = new CharacterBody(new FakeAvatar { VisualBounds = Pet }, start);
         var requested = new List<StateKind>();
@@ -23,6 +24,7 @@ public class StatesTests
             VisualBounds = Pet,
             WalkSpeed = MovementSolver.WalkSpeed,
             LandingY = landingY ?? (_ => 800),
+            HasGroundUnder = hasGroundUnder ?? (_ => true),
             RequestTransition = requested.Add,
         };
         return (context, body, requested);
@@ -115,6 +117,35 @@ public class StatesTests
         walk.Enter();
         walk.Update(1.0, context);
         Assert.Contains(StateKind.Fall, requested);
+    }
+
+    [Fact]
+    public void WalkStopsAtTheEdgeOfTheGapBetweenDisplays()
+    {
+        // RoamableArea는 경계 상자라 x>600에도 걸을 자리가 있는 것처럼 보이지만,
+        // 거기엔 디스플레이가 없다. 걸어 나가면 펫이 화면 밖으로 사라진다.
+        var (context, body, requested) = MakeContext(new Point(500, 800),
+            hasGroundUnder: p => p.X <= 600);
+        var walk = new WalkState { TargetX = 900 };
+        walk.Enter();
+        walk.Update(2.0, context);   // 180px — 빈 공간 안쪽까지 가는 걸음
+
+        Assert.Equal(500, body.Position.X);
+        Assert.Equal(StateKind.Idle, Assert.Single(requested));
+    }
+
+    [Fact]
+    public void IdleFallsWhenItIsStandingOverNoDisplayAtAll()
+    {
+        // 디스플레이 사이의 빈 공간에 던져지면 바닥 높이는 맞는데 화면이 없다.
+        // 떨어뜨려야 FallState가 가장 가까운 실제 바닥으로 되돌린다.
+        var (context, _, requested) = MakeContext(new Point(500, 800),
+            hasGroundUnder: _ => false);
+        var idle = new IdleState(new WanderScheduler(new Random(1)));
+        idle.Enter();
+        idle.Update(0.016, context);
+
+        Assert.Equal(StateKind.Fall, Assert.Single(requested));
     }
 
     // --- Fall ---

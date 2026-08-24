@@ -6,6 +6,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>Puck</AssemblyName>
     <RootNamespace>Puck</RootNamespace>
+    <ApplicationIcon>Resources\puck.ico</ApplicationIcon>
     <!--
       WFAC010 tells WinForms apps to move DPI config out of app.manifest and into
       Application.SetHighDpiMode. That is a WinForms-host API; this is a WPF host, so
@@ -27,8 +28,20 @@
     <Using Remove="System.Drawing" />
   </ItemGroup>
 
-  <!-- 동봉 아바타. 사용자가 Avatars\에 아무것도 넣지 않아도 펫이 뜬다. -->
+  <!--
+    진입점 XAML의 파일 이름이 App.xaml이 아니라서 SDK의 기본 글롭이
+    ApplicationDefinition으로 잡아 주지 않는다. 직접 지정한다.
+  -->
   <ItemGroup>
-    <Content Include="Resources\Avatars\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <Page Remove="PuckApp.xaml" />
+    <ApplicationDefinition Include="PuckApp.xaml" SubType="Designer" Generator="MSBuild:Compile" />
+  </ItemGroup>
+
+  <!--
+    동봉 아바타(사용자가 Avatars\에 아무것도 넣지 않아도 펫이 뜬다)와
+    트레이 아이콘. TrayIcon이 출력 폴더의 Resources\puck.ico를 찾는다.
+  -->
+  <ItemGroup>
+    <Content Include="Resources\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

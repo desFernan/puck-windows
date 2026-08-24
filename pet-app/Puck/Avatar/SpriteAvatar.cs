@@ -35,6 +35,13 @@ public sealed class SpriteAvatar : IAvatarPlayable
 
     public BitmapSource? CurrentImage => Image(_currentClip);
 
+    /// 매니페스트에 bounce_intensity가 있으면 그 값, 없으면 앱의 기본값.
+    public double BounceIntensityOrDefault =>
+        _load.Manifest.BounceIntensity ?? Movement.CharacterBody.DefaultBounceIntensity;
+
+    /// 지금 재생 중인 클립 키. UpdateBounce에 넘길 값이다.
+    public string CurrentClipKey => _currentClip;
+
     /// 접지점 기준. 대칭을 가정하지 않고 hitbox 폭의 절반만 왼쪽으로 민다.
     public Rect VisualBounds => new(-Size.Width / 2, -Size.Height, Size.Width, Size.Height);
 

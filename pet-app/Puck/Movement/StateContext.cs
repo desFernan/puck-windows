@@ -27,6 +27,11 @@ public sealed class StateContext
     /// 여기 끼어들 때 상태 코드는 한 줄도 바뀌지 않는다.
     public required Func<Point, double> LandingY { get; init; }
 
+    /// 그 지점이 실제 디스플레이 위인가. RoamableArea는 경계 상자라
+    /// 디스플레이 사이의 빈 공간까지 포함하고, 거기 선 펫은 화면 밖이라
+    /// 보이지 않는다. LandingY와 같은 이유로 클로저다.
+    public required Func<Point, bool> HasGroundUnder { get; init; }
+
     /// 이 프레임이 끝난 뒤 다른 상태로 가 달라는 요청. 즉시가 아니라
     /// 지연되는 이유는, 어떤 상태도 자기 update 도중에 컨트롤러를
     /// 변형하면 안 되기 때문이다.

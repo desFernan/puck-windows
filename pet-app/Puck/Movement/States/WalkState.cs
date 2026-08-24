@@ -33,7 +33,17 @@ public sealed class WalkState : IStateHandler
         var facing = MovementSolver.FacingToward(body.Position, new Point(_target, body.Position.Y));
         if (facing is not null) body.Facing = facing.Value;
 
-        body.Position = PetBounds.Contain(step.Position, context.VisualBounds, context.RoamableArea);
+        var next = PetBounds.Contain(step.Position, context.VisualBounds, context.RoamableArea);
+
+        // RoamableArea는 경계 상자라 디스플레이 사이의 빈 공간도 포함한다.
+        // 그리로 한 걸음 내디디면 펫이 화면 밖으로 사라지므로 가장자리에서 선다.
+        if (!context.HasGroundUnder(next))
+        {
+            context.RequestTransition(StateKind.Idle);
+            return;
+        }
+
+        body.Position = next;
 
         // 걸어 나간 자리에 바닥이 없으면 떨어진다. Idle과 같은 판정.
         var surfaceY = context.LandingY(body.Position);

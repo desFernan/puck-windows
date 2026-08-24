@@ -25,6 +25,14 @@ public sealed class IdleState(WanderScheduler scheduler) : IStateHandler
             return;
         }
 
+        // 디스플레이 사이의 빈 공간에 던져졌다면 발밑에 화면이 없다.
+        // 떨어뜨리면 FallState가 가장 가까운 바닥으로 되돌린다.
+        if (!context.HasGroundUnder(context.Body.Position))
+        {
+            context.RequestTransition(StateKind.Fall);
+            return;
+        }
+
         if (scheduler.Tick(dt))
             context.RequestTransition(StateKind.Walk);
     }

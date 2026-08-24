@@ -48,6 +48,16 @@ public sealed record ScreenSpace
         return ScreenBoundsList.MinBy(s => SquaredDistance(s, point));
     }
 
+    /// 그 발밑에 실제 디스플레이가 있는가.
+    ///
+    /// RoamableArea는 작업 영역들의 **경계 상자**라, 디스플레이가 계단처럼
+    /// 놓이면 그 안에 어느 디스플레이에도 속하지 않는 빈 공간이 생긴다.
+    /// 거기 선 펫은 화면 밖이라 보이지 않으므로, 걷기가 그리로 나가지
+    /// 않게 하고 이미 거기 있으면 떨어뜨려 되돌린다.
+    public bool HasGroundUnder(Point point)
+        => WorkingAreas.Any(a => point.X >= a.Left && point.X <= a.Right &&
+                                 a.Bottom >= point.Y && a.Top <= point.Y);
+
     /// 그 지점에서 곧장 떨어지면 닿는 바닥. Phase 2에서 창 윗면이
     /// 착지면으로 끼어들기 전까지는 언제나 화면 바닥이다.
     public double FloorY(Point point)
