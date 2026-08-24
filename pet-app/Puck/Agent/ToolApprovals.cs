@@ -1,0 +1,76 @@
+using System.Text.Json;
+using Puck.Tools;
+
+namespace Puck.Agent;
+
+/// 사람에게 물어야 하는 도구를 어떻게 물을 것인가.
+/// 채팅 UI는 Phase 4라, 지금은 답하는 쪽을 갈아 끼울 수 있게 인터페이스로 둔다.
+public interface IApprovalPrompt
+{
+    /// 이 도구를 이 인자로 실행해도 되는가.
+    Task<bool> RequestAsync(string toolName, IReadOnlyDictionary<string, JsonElement> arguments,
+                            CancellationToken cancellation);
+}
+
+/// UI가 아직 없을 때. 묻지 않고 거절한다 — 물어볼 수 없는 상황에서 "예"로
+/// 치는 것은 사람이 안 보는 사이에 명령을 실행하는 것이다.
+public sealed class DenyingApprovalPrompt : IApprovalPrompt
+{
+    public Task<bool> RequestAsync(string toolName, IReadOnlyDictionary<string, JsonElement> arguments,
+                                   CancellationToken cancellation) => Task.FromResult(false);
+}
+
+/// 도구를 실행해도 되는지 정한다.
+public sealed class ToolApprovals(IApprovalPrompt prompt)
+{
+    /// 물어보지 않고 지나가는 셸 명령들. 읽기만 하고, 되돌릴 것이 없고,
+    /// 사람이 매번 "예"를 누르게 하면 승인 자체가 의미를 잃는 것들.
+    ///
+    /// **첫 낱말만 본다.** 인자까지 판단하려 들면 `git log; rm -rf` 같은
+    /// 것을 놓치는 쪽으로 틀리게 되므로, 아래 검사가 이어붙인 명령을 통째로 막는다.
+    public static IReadOnlySet<string> ShellAllowlist { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "echo", "whoami", "hostname", "date", "pwd", "ver",
+        "dir", "ls", "cat", "type", "get-location", "get-date", "get-childitem",
+        "tasklist", "get-process", "ipconfig", "systeminfo",
+        "git",
+    };
+
+    /// 명령을 이어붙이거나 방향을 바꾸는 기호. 하나라도 있으면 허용 목록을
+    /// 적용하지 않는다 — `git log && del *` 의 첫 낱말도 `git`이다.
+    private static readonly char[] Chaining = [';', '|', '&', '>', '<', '`'];
+
+    public static bool IsAllowlistedCommand(string? command)
+    {
+        if (string.IsNullOrWhiteSpace(command)) return false;
+        if (command.IndexOfAny(Chaining) >= 0) return false;
+
+        var first = command.TrimStart().Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries)
+                           .FirstOrDefault();
+        return first is not null && ShellAllowlist.Contains(first);
+    }
+
+    /// 이 도구를 지금 실행해도 되는가. 필요하면 사람에게 묻는다.
+    public async Task<bool> IsAllowedAsync(ToolSpec spec, IReadOnlyDictionary<string, JsonElement> arguments,
+                                           AgentPermissionMode mode, CancellationToken cancellation)
+    {
+        switch (spec.Approval)
+        {
+            case ToolApproval.NotRequired:
+                return true;
+
+            case ToolApproval.RequiredUnlessAllowlisted:
+                var command = arguments.TryGetValue("command", out var c) && c.ValueKind == JsonValueKind.String
+                    ? c.GetString()
+                    : null;
+                if (IsAllowlistedCommand(command)) return true;
+                break;
+        }
+
+        // 설정이 "전부 해도 된다"면 그 말을 그대로 믿는다. 사람이 한 번
+        // 정한 것을 매 호출마다 다시 묻는 것은 설정을 없는 셈 치는 것이다.
+        if (mode == AgentPermissionMode.Everything) return true;
+
+        return await prompt.RequestAsync(spec.Name, arguments, cancellation);
+    }
+}
