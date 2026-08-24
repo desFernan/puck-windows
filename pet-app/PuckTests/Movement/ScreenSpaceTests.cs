@@ -71,6 +71,46 @@ public class ScreenSpaceTests
         Assert.False(staircase.HasGroundUnder(new Point(500, 1465)));
     }
 
+    // 1920×1080 주 모니터 + 오른쪽에 위로 어긋나게 붙은 세로 1080×1920 모니터.
+    // 경계 상자는 (0,-407)-(3000,1465)라, 주 모니터 아래이면서 세로 모니터
+    // 왼쪽인 자리가 어느 화면에도 속하지 않는다.
+    private static ScreenSpace Staircase() => new(
+        screenBoundsList: [new Rect(0, 0, 1920, 1080), new Rect(1920, -407, 1080, 1920)],
+        workingAreas: [new Rect(0, 0, 1920, 1032), new Rect(1920, -407, 1080, 1872)]);
+
+    [Fact]
+    public void APetThrownAboveADisplayStillHasGroundUnderIt()
+    {
+        // 위로 솟은 펫은 아직 자기 화면 위에 있다 — 내려오면 그 바닥에 착지한다.
+        Assert.True(Staircase().HasGroundUnder(new Point(500, -200)));
+    }
+
+    [Fact]
+    public void TheGapIsPulledBackOntoTheNearestDisplay()
+    {
+        var staircase = Staircase();
+        // 세로 모니터 바닥 높이인데 그 왼쪽 — 여기 착지하면 펫이 보이지 않는다.
+        var stuck = new Point(1842, 1465);
+        Assert.False(staircase.HasGroundUnder(stuck));
+
+        // 폭 130짜리 펫: 그림이 통째로 화면 안에 들어와야 하므로 발은
+        // 세로 모니터 왼쪽 끝(1920)이 아니라 거기서 반 폭만큼 안쪽이다.
+        var pet = new Rect(-65, -133, 130, 133);
+        var rescued = staircase.NearestStandablePoint(stuck, pet);
+        Assert.True(staircase.HasGroundUnder(rescued));
+        Assert.Equal(1985, rescued.X);
+        Assert.Equal(1465, rescued.Y);
+    }
+
+    [Fact]
+    public void APointBelowTheMainDisplayComesUpToItsFloor()
+    {
+        var pet = new Rect(-65, -133, 130, 133);
+        var rescued = Staircase().NearestStandablePoint(new Point(500, 1465), pet);
+        Assert.Equal(500, rescued.X);
+        Assert.Equal(1032, rescued.Y);
+    }
+
     [Fact]
     public void EmptyDisplayListIsRefused()
     {

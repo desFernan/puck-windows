@@ -55,10 +55,17 @@ public sealed class CharacterController
             WalkSpeed = source.WalkSpeed,
             LandingY = source.LandingY,
             HasGroundUnder = source.HasGroundUnder,
+            SnapToGround = source.SnapToGround,
             RequestTransition = Request,
         };
 
         Handler.Update(dt, frameContext);
+
+        // 어떤 상태가 어디에 놓았든 프레임이 끝날 때 펫은 실제 화면 위에 있어야 한다.
+        // 상태마다 막으면 하나를 빠뜨리는 순간(던지기, 드래그, 모니터 착탈, 앞으로
+        // 늘어날 상태들) 펫이 디스플레이 사이 빈 공간에 갇혀 영영 보이지 않는다.
+        if (!frameContext.ArtworkHasGround(_body.Position))
+            _body.Position = frameContext.SnapToGround(_body.Position, frameContext.VisualBounds);
 
         if (_pending is not { } next) return;
         _pending = null;

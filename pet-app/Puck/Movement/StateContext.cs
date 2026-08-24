@@ -27,13 +27,23 @@ public sealed class StateContext
     /// 여기 끼어들 때 상태 코드는 한 줄도 바뀌지 않는다.
     public required Func<Point, double> LandingY { get; init; }
 
-    /// 그 지점이 실제 디스플레이 위인가. RoamableArea는 경계 상자라
-    /// 디스플레이 사이의 빈 공간까지 포함하고, 거기 선 펫은 화면 밖이라
+    /// 그 지점 아래에 실제 디스플레이가 있는가. RoamableArea는 경계 상자라
+    /// 디스플레이 사이의 빈 공간까지 포함하고, 거기 있는 펫은 화면 밖이라
     /// 보이지 않는다. LandingY와 같은 이유로 클로저다.
     public required Func<Point, bool> HasGroundUnder { get; init; }
+
+    /// 그런 빈 공간에 놓인 펫을 가장 가까운 실제 화면 위로 끌어오는 함수.
+    /// 컨트롤러가 프레임 끝마다 불변식으로 적용한다.
+    public required Func<Point, Rect, Point> SnapToGround { get; init; }
 
     /// 이 프레임이 끝난 뒤 다른 상태로 가 달라는 요청. 즉시가 아니라
     /// 지연되는 이유는, 어떤 상태도 자기 update 도중에 컨트롤러를
     /// 변형하면 안 되기 때문이다.
     public required Action<StateKind> RequestTransition { get; init; }
+
+    /// 그 자리에서 **그림 전체**가 화면 위에 있는가. 발 한 점만 보면
+    /// 디스플레이 경계에서 펫의 절반이 빈 공간에 걸린 채로 멈춘다.
+    public bool ArtworkHasGround(Point position)
+        => HasGroundUnder(new Point(position.X + VisualBounds.Left, position.Y))
+        && HasGroundUnder(new Point(position.X + VisualBounds.Right, position.Y));
 }

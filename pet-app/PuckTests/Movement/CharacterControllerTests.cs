@@ -33,7 +33,9 @@ public class CharacterControllerTests
     private static CharacterController Make(
         IReadOnlyDictionary<StateKind, IStateHandler> states,
         StateKind initial,
-        CharacterBody? body = null)
+        CharacterBody? body = null,
+        Func<Point, bool>? hasGroundUnder = null,
+        Func<Point, Rect, Point>? snapToGround = null)
     {
         body ??= new CharacterBody(new FakeAvatar(), new Point(0, 0));
         return new CharacterController(body, states, initial, () => new StateContext
@@ -44,7 +46,8 @@ public class CharacterControllerTests
             VisualBounds = new Rect(-50, -100, 100, 100),
             WalkSpeed = MovementSolver.WalkSpeed,
             LandingY = _ => 800,
-            HasGroundUnder = _ => true,
+            HasGroundUnder = hasGroundUnder ?? (_ => true),
+            SnapToGround = snapToGround ?? ((p, _) => p),
             RequestTransition = _ => { },
         });
     }
@@ -159,6 +162,43 @@ public class CharacterControllerTests
         controller.Advance(0.016);
 
         Assert.Equal(StateKind.Idle, controller.Current);
+    }
+
+    [Fact]
+    public void APetLeftOverAGapBetweenDisplaysIsPulledBackOntoOne()
+    {
+        // 디스플레이가 계단처럼 놓이면 경계 상자 안에도 화면이 없는 자리가 있다.
+        // 던지기·드래그·모니터 착탈 어느 쪽으로 거기 놓이든, 프레임이 끝나면
+        // 실제 화면 위로 돌아와야 한다 — 아니면 영영 보이지 않는다.
+        var body = new CharacterBody(new FakeAvatar(), new Point(0, 0));
+        var stray = new RecordingState("Stray");
+        var controller = Make(
+            new Dictionary<StateKind, IStateHandler> { [StateKind.Idle] = stray },
+            StateKind.Idle, body,
+            hasGroundUnder: p => p.X <= 600,
+            snapToGround: (p, _) => new Point(Math.Min(p.X, 600), p.Y));
+
+        body.Position = new Point(1800, 500);   // 빈 공간
+        controller.Advance(0.016);
+
+        Assert.Equal(new Point(600, 500), body.Position);
+    }
+
+    [Fact]
+    public void APetStandingOnADisplayIsLeftAlone()
+    {
+        var body = new CharacterBody(new FakeAvatar(), new Point(0, 0));
+        var idle = new RecordingState("Idle");
+        var controller = Make(
+            new Dictionary<StateKind, IStateHandler> { [StateKind.Idle] = idle },
+            StateKind.Idle, body,
+            hasGroundUnder: _ => true,
+            snapToGround: (_, _) => new Point(-1, -1));   // 불렸다면 테스트가 깨진다
+
+        body.Position = new Point(300, 500);
+        controller.Advance(0.016);
+
+        Assert.Equal(new Point(300, 500), body.Position);
     }
 
     [Fact]

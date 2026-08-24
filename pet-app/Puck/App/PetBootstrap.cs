@@ -139,6 +139,7 @@ public sealed class PetBootstrap : IDisposable
         WalkSpeed = MovementSolver.WalkSpeed * _settings.MovementSpeedMultiplier,
         LandingY = _screens.FloorY,
         HasGroundUnder = _screens.HasGroundUnder,
+        SnapToGround = _screens.NearestStandablePoint,
         RequestTransition = _ => { },   // CharacterController가 자기 것으로 갈아 끼운다
     };
 

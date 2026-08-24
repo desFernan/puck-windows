@@ -37,7 +37,9 @@ public sealed class WalkState : IStateHandler
 
         // RoamableArea는 경계 상자라 디스플레이 사이의 빈 공간도 포함한다.
         // 그리로 한 걸음 내디디면 펫이 화면 밖으로 사라지므로 가장자리에서 선다.
-        if (!context.HasGroundUnder(next))
+        // 발 한 점이 아니라 그림 좌우 끝을 보는 이유는, 경계에서 절반만
+        // 걸친 채 멈추면 그것도 "잘려 보이는" 것이기 때문이다.
+        if (!context.ArtworkHasGround(next))
         {
             context.RequestTransition(StateKind.Idle);
             return;

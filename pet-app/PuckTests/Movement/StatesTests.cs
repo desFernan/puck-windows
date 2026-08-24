@@ -25,6 +25,7 @@ public class StatesTests
             WalkSpeed = MovementSolver.WalkSpeed,
             LandingY = landingY ?? (_ => 800),
             HasGroundUnder = hasGroundUnder ?? (_ => true),
+            SnapToGround = (p, _) => p,
             RequestTransition = requested.Add,
         };
         return (context, body, requested);

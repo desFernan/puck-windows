@@ -48,15 +48,26 @@ public sealed record ScreenSpace
         return ScreenBoundsList.MinBy(s => SquaredDistance(s, point));
     }
 
-    /// 그 발밑에 실제 디스플레이가 있는가.
+    /// 이 지점에서 곧장 아래로 내려가면 언젠가 화면 바닥을 만나는가.
     ///
     /// RoamableArea는 작업 영역들의 **경계 상자**라, 디스플레이가 계단처럼
     /// 놓이면 그 안에 어느 디스플레이에도 속하지 않는 빈 공간이 생긴다.
-    /// 거기 선 펫은 화면 밖이라 보이지 않으므로, 걷기가 그리로 나가지
-    /// 않게 하고 이미 거기 있으면 떨어뜨려 되돌린다.
+    /// 거기 있는 펫은 화면 밖이라 보이지 않는다.
+    ///
+    /// 위쪽은 보지 않는다 — 던져져서 화면 위로 솟은 펫은 아직 자기 화면
+    /// 위에 있는 것이고, 내려오면 그 바닥에 착지한다.
     public bool HasGroundUnder(Point point)
-        => WorkingAreas.Any(a => point.X >= a.Left && point.X <= a.Right &&
-                                 a.Bottom >= point.Y && a.Top <= point.Y);
+        => WorkingAreas.Any(a => point.X >= a.Left && point.X <= a.Right && a.Bottom >= point.Y);
+
+    /// 발밑에 화면이 없는 자리에 놓인 펫을 가장 가까운 실제 화면 위로 끌어온다.
+    /// Y는 그 화면 바닥보다 아래로 두지 않고, X는 **그림이** 그 화면 안에
+    /// 들어오도록 민다 — 발 위치만 맞추면 그림 절반이 빈 공간에 걸린다.
+    public Point NearestStandablePoint(Point point, Rect visualBounds)
+    {
+        var area = WorkingAreas.MinBy(a => SquaredDistance(a, point));
+        var contained = PetBounds.Contain(point, visualBounds, area);
+        return new Point(contained.X, Math.Min(point.Y, area.Bottom));
+    }
 
     /// 그 지점에서 곧장 떨어지면 닿는 바닥. Phase 2에서 창 윗면이
     /// 착지면으로 끼어들기 전까지는 언제나 화면 바닥이다.
