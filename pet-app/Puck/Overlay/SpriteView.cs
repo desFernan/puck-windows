@@ -22,6 +22,15 @@ public static class SpriteTransform
 /// 스프라이트 하나를 그리는 것 말고는 아무것도 하지 않는다.
 public sealed class SpriteView : FrameworkElement
 {
+    public SpriteView()
+    {
+        // 스프라이트는 원본보다 한참 작게 그려진다(1200px 그림을 130px로).
+        // WPF 기본값인 이중선형 보간은 축소할 때 2×2 이웃만 보기 때문에
+        // 가장자리가 계단처럼 서고 움직일 때 반짝인다. Fant는 줄어드는 만큼의
+        // 면적을 평균 내므로 축소에 맞는 방식이다.
+        RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.HighQuality);
+    }
+
     public SpriteAvatar? Avatar { get; set; }
 
     /// 이 뷰가 올라가 있는 오버레이 창의 좌상단이 가상 화면 어디인가.
