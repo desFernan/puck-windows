@@ -92,9 +92,13 @@ public sealed class ToolApprovals(IApprovalPrompt prompt)
                 break;
         }
 
-        // 설정이 "전부 해도 된다"면 그 말을 그대로 믿는다. 사람이 한 번
-        // 정한 것을 매 호출마다 다시 묻는 것은 설정을 없는 셈 치는 것이다.
-        if (mode == AgentPermissionMode.Everything) return true;
+        // `Auto`는 사람이 "그만 물어라"라고 답해 둔 것이다. 물음을 띄웠다가
+        // 대신 답해 주는 것이 아니라 **아예 띄우지 않는다** — 떴다가 저절로
+        // 닫히는 카드는 아무도 누를 수 없는 단추 두 개를 남긴다.
+        //
+        // `Everything`은 여기 없다. 그것이 정하는 것은 코딩 CLI가 혼자 무엇을
+        // 하느냐이고, 모델이 펫에게 시킨 셸 명령은 다른 물음이다.
+        if (mode.ApprovesWithoutAsking()) return true;
 
         return await prompt.RequestAsync(spec.Name, arguments, cancellation);
     }

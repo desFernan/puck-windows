@@ -47,8 +47,14 @@ there is no official Swift SDK). Put your key in `%LOCALAPPDATA%\Puck\.env`:
 ```
 ANTHROPIC_API_KEY=sk-ant-...
 PUCK_MODEL=claude-opus-5      # optional
-AGENT_PERMISSIONS=tools       # tools | edits | all
+AGENT_PERMISSIONS=tools       # tools | edits | all | auto
 ```
+
+`auto` is the one mode that stops asking: Puck's own approval-gated tools —
+a shell command, a click on somebody else's window — run straight away instead
+of putting a prompt in the chat. The other three decide only what a coding CLI
+may do on its own and leave that gate exactly where it is. Anything absent or
+unrecognised falls back to `tools`, the narrowest.
 
 Environment variables win over the file, and the file is re-read per request —
 adding a key does not need a restart. macOS's `run_applescript` is

@@ -45,8 +45,13 @@ SDK가 없어서다). 키는 `%LOCALAPPDATA%\Puck\.env`에 넣는다:
 ```
 ANTHROPIC_API_KEY=sk-ant-...
 PUCK_MODEL=claude-opus-5      # 선택
-AGENT_PERMISSIONS=tools       # tools | edits | all
+AGENT_PERMISSIONS=tools       # tools | edits | all | auto
 ```
+
+묻기를 멈추는 것은 `auto` 하나뿐이다 — 펫 자신의 승인 도구(셸 명령, 남의 창에
+대한 클릭)가 채팅에 물음을 띄우지 않고 곧장 돈다. 나머지 셋은 코딩 CLI가 혼자
+무엇을 하느냐만 정하고 그 게이트는 건드리지 않는다. 없거나 모르는 값은 가장
+좁은 `tools`로 떨어진다.
 
 환경 변수가 파일을 이기고, 파일은 요청마다 다시 읽는다 — 키를 넣으려고 앱을
 껐다 켤 필요가 없다. macOS의 `run_applescript` 자리는 `run_powershell`이

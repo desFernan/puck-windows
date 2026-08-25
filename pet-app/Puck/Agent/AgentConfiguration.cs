@@ -10,8 +10,30 @@ public enum AgentPermissionMode
     ToolsOnly,
     /// ...그리고 파일을 고쳐도 된다.
     Edits,
-    /// ...명령을 실행해도 된다.
+    /// ...명령을 실행해도 된다. **펫 자신의 위험한 도구는 여전히 묻는다** —
+    /// 이 설정은 코딩 CLI가 혼자 무엇까지 해도 되는가에 대한 것이다.
     Everything,
+    /// ...그리고 아무것도 묻지 않는다. 위에 더해 펫 자신의 승인 도구
+    /// (셸 명령, PowerShell 스크립트, 남의 창에 대한 클릭)도 승인 카드를
+    /// 띄우지 않고 곧장 돈다.
+    ///
+    /// Claude Code의 bypass 모드와 같은 거래다: 에이전트는 사람을 기다리지
+    /// 않게 되고, 사람은 무슨 일이 벌어지기 전에 그것을 보지 못하게 된다.
+    /// 절대 기본값이 아니고, 골라야만 닿는다.
+    Auto,
+}
+
+public static class AgentPermissionModeExtensions
+{
+    /// 이 모드가 **펫 자신의 게이트**까지 여는가. `AgentRunner`가
+    /// `Required`/`RequiredUnlessAllowlisted` 도구 앞에서 여는 그 게이트다.
+    ///
+    /// 앞의 세 모드는 그것을 건드리지 않는다 — 그것들이 정하는 것은 CLI가
+    /// 혼자 무엇을 하느냐이고, 모델이 펫에게 시킨 셸 명령은 다른 물음이자
+    /// 다른 프롬프트다. `Auto`만이 "그만 물어라"라는 뜻이므로, 둘 다에
+    /// 닿아야 하는 것도 그것뿐이다.
+    public static bool ApprovesWithoutAsking(this AgentPermissionMode mode)
+        => mode == AgentPermissionMode.Auto;
 }
 
 /// 에이전트가 한 요청을 보낼 때 필요한 것들.
@@ -69,6 +91,7 @@ public sealed record AgentConfiguration
     {
         "edits" => AgentPermissionMode.Edits,
         "all" or "everything" => AgentPermissionMode.Everything,
+        "auto" => AgentPermissionMode.Auto,
         _ => AgentPermissionMode.ToolsOnly,
     };
 

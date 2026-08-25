@@ -88,6 +88,8 @@ public class AgentConfigurationTests
     [InlineData("edits", AgentPermissionMode.Edits)]
     [InlineData("all", AgentPermissionMode.Everything)]
     [InlineData("everything", AgentPermissionMode.Everything)]
+    [InlineData("auto", AgentPermissionMode.Auto)]
+    [InlineData("AUTO", AgentPermissionMode.Auto)]
     [InlineData("tools", AgentPermissionMode.ToolsOnly)]
     public void PermissionsParseFromTheirSettingValue(string raw, AgentPermissionMode expected)
     {

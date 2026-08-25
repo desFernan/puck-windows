@@ -156,15 +156,31 @@ public class ToolApprovalsTests
     }
 
     [Fact]
-    public async Task WithEverythingAllowedNothingIsAsked()
+    public async Task OnlyAutoStopsAsking()
     {
-        // 사람이 한 번 정한 것을 매 호출마다 다시 묻는 것은 그 설정을 없는 셈 치는 것이다.
+        // "그만 물어라"라고 답해 둔 것이므로 물음을 아예 띄우지 않는다.
         var prompt = new ScriptedPrompt(false);
         var approvals = new ToolApprovals(prompt);
 
         Assert.True(await approvals.IsAllowedAsync(
-            Spec(ToolApproval.Required), Args(), AgentPermissionMode.Everything, default));
+            Spec(ToolApproval.Required), Args(), AgentPermissionMode.Auto, default));
         Assert.Equal(0, prompt.Asked);
+    }
+
+    [Theory]
+    [InlineData(AgentPermissionMode.ToolsOnly)]
+    [InlineData(AgentPermissionMode.Edits)]
+    [InlineData(AgentPermissionMode.Everything)]
+    public async Task TheCarefulModesStillAskBeforePucksOwnDangerousTools(AgentPermissionMode mode)
+    {
+        // Everything이 정하는 것은 코딩 CLI가 혼자 무엇을 하느냐다. 모델이
+        // 펫에게 시킨 셸 명령은 다른 물음이고, 그 게이트는 Auto만 연다.
+        var prompt = new ScriptedPrompt(false);
+        var approvals = new ToolApprovals(prompt);
+
+        Assert.False(await approvals.IsAllowedAsync(
+            Spec(ToolApproval.Required), Args(), mode, default));
+        Assert.Equal(1, prompt.Asked);
     }
 
     [Fact]
