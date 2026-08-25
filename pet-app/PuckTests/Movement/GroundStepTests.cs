@@ -26,8 +26,10 @@ public class GroundStepTests
         }, body);
     }
 
-    private static MovementSolver.Step Step(double x, bool arrived = false)
-        => new(new Point(x, 800), arrived);
+    /// 걸음은 늘 수평이다 — y를 따로 받는 이유는 발밑이 사라진 자리
+    /// (딛는 높이와 착지면이 다른 자리)를 만들어야 하기 때문이다.
+    private static MovementSolver.Step Step(double x, double y = 800, bool arrived = false)
+        => new(new Point(x, y), arrived);
 
     [Fact]
     public void AnOrdinaryStepMovesThePetAndKeepsGoing()
@@ -51,9 +53,10 @@ public class GroundStepTests
     [Fact]
     public void GroundVanishingUnderfootFalls()
     {
+        // 공중(500)을 딛었는데 착지면은 한참 아래(800)다.
         var (context, _) = Make(new Point(100, 500), landingY: _ => 800);
 
-        Assert.Equal(GroundStep.Outcome.Fell, GroundStep.Take(Step(200), context));
+        Assert.Equal(GroundStep.Outcome.Fell, GroundStep.Take(Step(200, y: 500), context));
     }
 
     [Fact]
