@@ -87,6 +87,31 @@ public class AvatarLoaderTests
     }
 
     [Fact]
+    public void AnEmotionResolvesLikeAnyOtherClip()
+    {
+        // 표정은 아바타 만드는 사람이 emotions에 적는다. 펫은 그것을 움직임
+        // 클립과 똑같이 한 장의 그림으로 쓴다.
+        var result = Load("""
+        {"schema_version":1,"name":"a","type":"sprites",
+         "hitbox":{"width":1,"height":1},"clips":{"idle":"i"},
+         "emotions":{"happy":"beaming"}}
+        """);
+        Assert.Equal("beaming", AvatarLoader.ResolveClipStem("happy", result));
+    }
+
+    [Fact]
+    public void AnUnknownEmotionStillFallsBackToIdle()
+    {
+        // 아바타에 그 표정이 없다고 펫이 사라지면 안 된다.
+        var result = Load("""
+        {"schema_version":1,"name":"a","type":"sprites",
+         "hitbox":{"width":1,"height":1},"clips":{"idle":"i"},
+         "emotions":{"happy":"beaming"}}
+        """);
+        Assert.Equal("i", AvatarLoader.ResolveClipStem("type", result));
+    }
+
+    [Fact]
     public void AManifestWithAUtf8BomStillLoads()
     {
         // Windows에서 메모장·PowerShell·VS Code로 매니페스트를 고치면 BOM이 붙는다.

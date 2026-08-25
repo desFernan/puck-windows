@@ -13,6 +13,16 @@ public static class Strings
         ["avatar.loadFailed"] = "아바타를 불러오지 못했습니다",
         ["avatar.noneInstalled"] = "설치된 아바타가 없습니다",
         ["bubble.prompt"] = "무엇을 시킬까요? (Enter로 보내기, Esc로 닫기)",
+        ["tray.openChat"] = "대화 열기",
+        ["chat.title"] = "Puck",
+        ["chat.prompt"] = "무엇이든 시켜 보세요. Enter로 보냅니다.",
+        ["chat.allow"] = "허용",
+        ["chat.deny"] = "거절",
+        ["chat.approvalQuestion"] = "{0}을(를) 실행할까요?",
+        ["chat.failed"] = "대화가 실패했습니다",
+        ["chat.usingTool"] = "· {0}",
+        ["chat.toolFailed"] = "· {0} — 실패",
+        ["chat.toolRefused"] = "· {0} — 거절함",
     };
 
     /// 없는 키는 키 자체를 돌려준다 — 문자열 하나가 빠졌다고 UI가
@@ -26,4 +36,16 @@ public static class Strings
     public static string AvatarLoadFailed => Get("avatar.loadFailed");
     public static string AvatarNoneInstalled => Get("avatar.noneInstalled");
     public static string BubblePrompt => Get("bubble.prompt");
+    public static string TrayOpenChat => Get("tray.openChat");
+    public static string ChatTitle => Get("chat.title");
+    public static string ChatPrompt => Get("chat.prompt");
+    public static string ChatAllow => Get("chat.allow");
+    public static string ChatDeny => Get("chat.deny");
+
+    /// `{0}`은 도구 이름.
+    public static string ChatApprovalQuestion => Get("chat.approvalQuestion");
+    public static string ChatFailed => Get("chat.failed");
+    public static string ChatUsingTool => Get("chat.usingTool");
+    public static string ChatToolFailed => Get("chat.toolFailed");
+    public static string ChatToolRefused => Get("chat.toolRefused");
 }

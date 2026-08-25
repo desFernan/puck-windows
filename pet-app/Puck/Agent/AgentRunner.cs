@@ -51,7 +51,7 @@ public sealed class AgentRunner(
     {
         var config = configuration();
         if (!config.IsUsable)
-            return "API 키가 없습니다. %LOCALAPPDATA%\\Puck\\.env에 ANTHROPIC_API_KEY를 넣어 주세요.";
+            return Say("API 키가 없습니다. %LOCALAPPDATA%\\Puck\\.env에 ANTHROPIC_API_KEY를 넣어 주세요.");
 
         await _oneTurnAtATime.WaitAsync(cancellation);
         try
@@ -118,7 +118,15 @@ public sealed class AgentRunner(
         const string stopped = "도구를 너무 여러 번 부르게 되어 여기서 멈췄습니다. 조금 더 좁혀서 다시 물어봐 주세요.";
         Commit([.. History, AgentMessage.FromUser(userText),
                 new AgentMessage(AgentRole.Assistant, [new AgentBlock.Text(stopped)])]);
-        return stopped;
+        return Say(stopped);
+    }
+
+    /// 펫이 하는 말은 **전부** 여기를 지난다 — 모델이 한 말이든, 우리가 대신
+    /// 하는 말이든. 채팅 창이 한 곳만 보고 있으면 되게.
+    private string Say(string text)
+    {
+        Progress?.Invoke(new AgentEvent.Said(text));
+        return text;
     }
 
     private void Commit(List<AgentMessage> turn)

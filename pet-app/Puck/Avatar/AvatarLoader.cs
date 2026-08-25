@@ -90,11 +90,19 @@ public static class AvatarLoader
 
     /// 요청한 클립의 파일 스템. 없으면 idle의 것으로 떨어지고, idle 자체가
     /// 스템이 아니면(video 아바타) null.
+    ///
+    /// `clips`에 없으면 `emotions`도 본다. 표정은 아바타 만드는 사람이
+    /// 따로 적는 자리이고(매니페스트의 `emotions`), 펫은 그것을 움직임
+    /// 클립과 똑같이 한 장의 그림으로 쓴다.
     public static string? ResolveClipStem(string clip, AvatarLoadResult result)
     {
         if (result.Manifest.Clips.TryGetValue(clip, out var reference) &&
             reference is ClipReference.Stem named)
             return named.Value;
+
+        if (result.Manifest.Emotions?.TryGetValue(clip, out var emotion) == true &&
+            emotion is ClipReference.Stem emotionNamed)
+            return emotionNamed.Value;
 
         if (result.Manifest.Clips.TryGetValue("idle", out var idle) &&
             idle is ClipReference.Stem idleNamed)

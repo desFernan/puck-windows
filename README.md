@@ -13,11 +13,14 @@ Bugs, feature requests, build help, or just want to hang out — the
 [support server](https://discord.gg/ePBZVnwSYE) is the fastest way to reach
 us. Come say hi!
 
-**Current status: Phase 0 + Phase 1 done — the pet walks the screen.**
+**Current status: Phase 0–4 done — the pet walks the screen, and you can talk to it.**
 A transparent, always-on-top, click-through overlay shows the avatar; physics
 and the state machine are running; click, drag and throw work; it lands on
-the taskbar. It reads avatar folders made on macOS as-is. The agent, chat
-window, editor and terminal are Phase 2–6.
+the taskbar. It reads avatar folders made on macOS as-is. It senses windows
+and UI elements, and a chat window (tray → "Open chat") talks to Claude with
+nine tools — window listing, UI element search, pointing, clicking, screen
+capture, app launch and PowerShell. Tools that change things ask before they
+run. The code editor and terminal panel are Phase 5–6.
 
 ## Build
 
@@ -38,10 +41,18 @@ Unattended, exits nonzero on any failure.
 
 ## Agent providers
 
-Not built yet on Windows — chat, tool execution and the ACP-backed code
-editor are Phase 2+. On macOS these talk to the Anthropic or OpenAI API
-directly, with `code_editor` running a vendored ACP agent under `node`;
-Windows is expected to work the same way once built.
+Anthropic, via the official C# SDK (macOS calls the HTTP API by hand because
+there is no official Swift SDK). Put your key in `%LOCALAPPDATA%\Puck\.env`:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+PUCK_MODEL=claude-opus-5      # optional
+AGENT_PERMISSIONS=tools       # tools | edits | all
+```
+
+Environment variables win over the file, and the file is re-read per request —
+adding a key does not need a restart. macOS's `run_applescript` is
+`run_powershell` here; the ACP-backed code editor is still Phase 5.
 
 ## Making it your own
 

@@ -1,0 +1,142 @@
+using System.Windows;
+using System.Windows.Input;
+using Puck.Localization;
+
+namespace Puck.ClientWindow;
+
+/// 펫과 글로 말하는 창. puck-linux의 `puck-client`를 옮긴 것이다.
+///
+/// 저쪽은 창이 **별도 프로세스**라 소켓으로 펫과 이야기하지만, 여기는 한
+/// 프로세스이므로 창이 `AgentRunner`를 직접 부른다 — 옮길 것은 소켓이 아니라
+/// 화면과 승인 흐름이다.
+public partial class ChatWindow : Window
+{
+    private readonly Transcript _transcript = new();
+
+    /// 트레이 → 종료가 세운다. 그때는 숨기지 않고 정말로 닫는다.
+    private bool _closingForGood;
+
+    /// 답을 기다리는 승인. 도구는 한 번에 하나씩 돌므로 언제나 하나뿐이다.
+    private TaskCompletionSource<bool>? _pendingApproval;
+    private CancellationTokenRegistration _approvalCancellation;
+
+    public ChatWindow()
+    {
+        InitializeComponent();
+
+        Title = Strings.ChatTitle;
+        AllowButton.Content = Strings.ChatAllow;
+        DenyButton.Content = Strings.ChatDeny;
+        Lines.ItemsSource = _transcript.Entries;
+
+        Append(TranscriptKind.Notice, Strings.ChatPrompt);
+    }
+
+    /// 사람이 한 줄 적어 보냈다.
+    public event Action<string>? Submitted;
+
+    /// 어느 스레드에서 불러도 된다 — 에이전트 루프는 스레드 풀을 오간다.
+    public void Append(TranscriptKind kind, string text)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.InvokeAsync(() => Append(kind, text));
+            return;
+        }
+
+        _transcript.Add(kind, text);
+        // 새 줄은 언제나 보여야 한다. 사람이 위로 올려 읽고 있어도 마찬가지다 —
+        // 답이 왔는데 화면이 그대로면 펫이 무시한 것으로 읽힌다.
+        Scroller.ScrollToEnd();
+    }
+
+    public void ShowAndActivate()
+    {
+        Show();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
+        Input.Focus();
+    }
+
+    /// 이 도구를 실행해도 되는지 사람에게 묻고 기다린다. **UI 스레드에서만**
+    /// 부른다 — 부르는 쪽은 `ChatApprovalPrompt`가 맞춰 준다.
+    ///
+    /// 창을 띄우고 활성화하는 이유는, 묻는 것이 보이지 않으면 사람은 펫이
+    /// 멈춘 줄 알기 때문이다.
+    public Task<bool> RequestApprovalAsync(string toolName, string arguments, CancellationToken cancellation)
+    {
+        // 앞의 물음이 아직 남아 있으면 그것은 거절로 닫는다. 답을 못 받은
+        // 물음을 화면에 겹쳐 두면 어느 것에 답하는지 알 수 없다.
+        Resolve(false);
+
+        ShowAndActivate();
+
+        ApprovalQuestion.Text = string.Format(Strings.ChatApprovalQuestion, toolName);
+        ApprovalArguments.Text = arguments;
+        ApprovalPanel.Visibility = Visibility.Visible;
+
+        var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _pendingApproval = pending;
+
+        // 턴이 취소되면 물음도 사라져야 한다. 남겨 두면 이미 끝난 일에
+        // 사람이 "허용"을 누르게 된다.
+        _approvalCancellation = cancellation.Register(
+            () => Dispatcher.InvokeAsync(() => Resolve(false)));
+
+        return pending.Task;
+    }
+
+    private void OnAllowClicked(object sender, RoutedEventArgs e) => Resolve(true);
+
+    private void OnDenyClicked(object sender, RoutedEventArgs e) => Resolve(false);
+
+    private void Resolve(bool allowed)
+    {
+        var pending = _pendingApproval;
+        _pendingApproval = null;
+
+        _approvalCancellation.Dispose();
+        _approvalCancellation = default;
+
+        ApprovalPanel.Visibility = Visibility.Collapsed;
+        pending?.TrySetResult(allowed);
+    }
+
+    private void OnInputKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+
+        e.Handled = true;
+        var text = Input.Text.Trim();
+        if (text.Length == 0) return;
+
+        Input.Clear();
+        Submitted?.Invoke(text);
+    }
+
+    /// 앱이 끝날 때. 이때만 창이 진짜로 닫힌다.
+    public void CloseForGood()
+    {
+        // 두 번 부를 수 있는 자리다(트레이 종료 → OnExit → Dispose).
+        if (_closingForGood) return;
+
+        _closingForGood = true;
+        Close();
+    }
+
+    /// 창을 닫는 것은 대화를 끝내는 것이지 앱을 끄는 것이 아니다 — 트레이
+    /// 앱이므로 펫은 계속 산다. 다시 열면 지난 대화가 그대로 있다.
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        base.OnClosing(e);
+
+        // 물어 둔 것이 있으면 거절로 닫는다. 아무도 못 보는 물음을 답을
+        // 기다린 채로 두면 턴이 영영 끝나지 않는다.
+        Resolve(false);
+
+        if (_closingForGood) return;
+
+        e.Cancel = true;
+        Hide();
+    }
+}

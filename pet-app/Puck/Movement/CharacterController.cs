@@ -95,6 +95,10 @@ public sealed class CharacterController
         Transitioned?.Invoke(previous, next);
     }
 
+    /// 지금 상태의 클립을 다시 건다. 표정 같은 것이 잠깐 다른 그림을 덮었다가
+    /// 물러날 때, 상태를 건드리지 않고 원래 그림으로 돌아오는 길이다.
+    public void ReplayCurrentClip() => PlayClipFor(Handler);
+
     private void PlayClipFor(IStateHandler handler)
         => _body.Play(handler.ClipKey, handler.LoopsClip);
 }

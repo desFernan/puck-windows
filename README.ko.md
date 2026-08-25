@@ -12,10 +12,13 @@
 버그 제보, 기능 요청, 빌드 관련 질문, 아니면 그냥 놀러 오고 싶어도 —
 [서포트 서버](https://discord.gg/ePBZVnwSYE)가 가장 빠른 연락 방법입니다. 놀러 오세요!
 
-**지금 상태: Phase 0 + Phase 1 완료 — 펫이 화면 위를 걷는다.**
+**지금 상태: Phase 0~4 완료 — 펫이 화면 위를 걷고, 말을 걸 수 있다.**
 투명·항상 위·클릭스루 오버레이에 아바타가 뜨고, 물리와 상태기계가 돌고,
 클릭·드래그·던지기가 되고, 작업표시줄 위에 착지한다. mac에서 만든 아바타
-폴더를 그대로 읽는다. 에이전트·채팅 창·에디터·터미널은 Phase 2~6이다.
+폴더를 그대로 읽는다. 창과 UI 요소를 감지하고, 채팅 창(트레이 → "대화 열기")
+으로 Claude와 이야기한다. 도구는 아홉 개 — 창 목록, UI 요소 찾기, 가리키기,
+클릭, 화면 캡처, 프로그램 실행, PowerShell. 무언가를 바꾸는 도구는 실행 전에
+사람에게 묻는다. 코드 에디터와 터미널 패널은 Phase 5~6이다.
 
 ## 빌드
 
@@ -36,10 +39,18 @@ pet-app\scripts\test.ps1   # xUnit, 무인 실행
 
 ## 에이전트 프로바이더
 
-Windows에는 아직 없다 — 채팅, 도구 실행, ACP 기반 코드 에디터는 Phase 2+이다.
-macOS에서는 Anthropic 또는 OpenAI API와 직접 통신하고, `code_editor`는
-`node` 아래에서 벤더 ACP 에이전트를 돌린다. Windows도 같은 방식이 될
-예정이다.
+Anthropic. 공식 C# SDK를 쓴다(macOS가 HTTP를 직접 쓰는 이유는 Swift용 공식
+SDK가 없어서다). 키는 `%LOCALAPPDATA%\Puck\.env`에 넣는다:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+PUCK_MODEL=claude-opus-5      # 선택
+AGENT_PERMISSIONS=tools       # tools | edits | all
+```
+
+환경 변수가 파일을 이기고, 파일은 요청마다 다시 읽는다 — 키를 넣으려고 앱을
+껐다 켤 필요가 없다. macOS의 `run_applescript` 자리는 `run_powershell`이
+받는다. ACP 기반 코드 에디터는 아직 Phase 5다.
 
 ## 내 것으로 만들기
 

@@ -11,10 +11,13 @@ public sealed class TrayIcon : IDisposable
 {
     private readonly NotifyIcon _icon;
 
-    public TrayIcon(Action onToggleVisible, Action onOpenCustomisationFolder,
+    public TrayIcon(Action onOpenChat, Action onToggleVisible, Action onOpenCustomisationFolder,
                     Action onReloadAvatar, Action onQuit)
     {
         var menu = new ContextMenuStrip();
+        // 맨 위. 펫에게 말을 거는 것이 이 앱이 하는 일이다.
+        menu.Items.Add(Strings.TrayOpenChat, null, (_, _) => onOpenChat());
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(Strings.TrayToggleVisible, null, (_, _) => onToggleVisible());
         menu.Items.Add(Strings.TrayOpenCustomisationFolder, null, (_, _) => onOpenCustomisationFolder());
         menu.Items.Add(Strings.TrayReloadAvatar, null, (_, _) => onReloadAvatar());
