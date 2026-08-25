@@ -35,6 +35,7 @@ public sealed record ToolSpec
 
     public static JsonElement ObjectParam(string description, object properties)
         => JsonSerializer.SerializeToElement(new { type = "object", description, properties });
+
 }
 
 /// 도구가 실제로 하는 일.

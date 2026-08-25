@@ -40,27 +40,15 @@ public sealed class CharacterController
     /// 어떤 상태도 자기 update 도중에 교체되면 안 되기 때문이다.
     public void Request(StateKind kind) => _pending = kind;
 
-    /// 팩토리가 준 컨텍스트를 그대로 쓰지 않고 다시 만드는 이유는
-    /// RequestTransition을 컨트롤러 자신의 Request로 바꿔 끼우기
-    /// 위해서다 — 팩토리는 그 구멍을 채울 방법이 없다.
+    /// 팩토리가 준 컨텍스트를 그대로 쓰지 않는 이유는 RequestTransition을
+    /// 컨트롤러 자신의 Request로 바꿔 끼우기 위해서다 — 팩토리는 그 구멍을
+    /// 채울 방법이 없다. `with` 하나로 바꾸는 것은 필드를 손으로 옮겨 담으면
+    /// StateContext에 필드가 늘 때마다 여기 적기를 잊는 쪽으로 조용히 틀리기
+    /// 때문이다(그 필드는 상태에 도달하지 않는다).
     public void Advance(double dt)
     {
         var source = _contextFactory();
-        var frameContext = new StateContext
-        {
-            Body = source.Body,
-            RoamableArea = source.RoamableArea,
-            AvatarHeight = source.AvatarHeight,
-            VisualBounds = source.VisualBounds,
-            WalkSpeed = source.WalkSpeed,
-            LandingY = source.LandingY,
-            HasGroundUnder = source.HasGroundUnder,
-            SnapToGround = source.SnapToGround,
-            LedgeBeyond = source.LedgeBeyond,
-            Windows = source.Windows,
-            UnclimbableWindows = source.UnclimbableWindows,
-            RequestTransition = Request,
-        };
+        var frameContext = source with { RequestTransition = Request };
 
         Handler.Update(dt, frameContext);
 

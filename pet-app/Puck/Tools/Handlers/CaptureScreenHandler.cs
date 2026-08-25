@@ -23,14 +23,7 @@ public sealed class CaptureScreenHandler(Func<Rect> virtualScreen) : IToolHandle
             "지금 화면에 무엇이 있는지 사람이 확인해야 할 때 쓴다.",
         Properties = new Dictionary<string, JsonElement>
         {
-            ["frame"] = ToolSpec.ObjectParam("찍을 사각형 {left, top, width, height}. 비우면 전체 화면.",
-                new
-                {
-                    left = new { type = "number" },
-                    top = new { type = "number" },
-                    width = new { type = "number" },
-                    height = new { type = "number" },
-                }),
+            ["frame"] = ToolFrame.RectParam("찍을 사각형 {left, top, width, height}. 비우면 전체 화면."),
         },
         Approval = ToolApproval.NotRequired,
     };
@@ -82,15 +75,9 @@ public sealed class CaptureScreenHandler(Func<Rect> virtualScreen) : IToolHandle
 
     private static Int32Rect? RegionFrom(IReadOnlyDictionary<string, JsonElement> arguments)
     {
-        if (!arguments.TryGetValue("frame", out var frame) || frame.ValueKind != JsonValueKind.Object) return null;
+        if (Args.RectFrom(arguments, "frame") is not { } frame) return null;
+        if (frame.Width <= 0 || frame.Height <= 0) return null;
 
-        double? Get(string name) => frame.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.Number
-            ? p.GetDouble() : null;
-
-        if (Get("left") is not { } left || Get("top") is not { } top ||
-            Get("width") is not { } width || Get("height") is not { } height) return null;
-        if (width <= 0 || height <= 0) return null;
-
-        return new Int32Rect((int)left, (int)top, (int)width, (int)height);
+        return new Int32Rect((int)frame.Left, (int)frame.Top, (int)frame.Width, (int)frame.Height);
     }
 }

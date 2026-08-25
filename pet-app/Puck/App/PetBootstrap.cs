@@ -33,10 +33,6 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     private CharacterController? _controller;
     private ScreenSpace? _screens;
 
-    /// 에이전트가 일하는 동안 펫이 짓는 표정. 프레임 루프에서만 읽고 쓴다.
-    private readonly EmotionOverride _emotion = new();
-    private bool _emotionShowing;
-
     /// 펫과 글로 말하는 창. 트레이에서 열거나, 승인을 물어야 할 때 저절로 뜬다.
     private ChatWindow? _chat;
     private ReactDragState? _drag;
@@ -44,13 +40,16 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     private WindowListWatcher? _windows;
     private WalkState? _walk;
     private MoveToState? _moveTo;
-    private GlobalHotkeyManager? _hotkeys;
+    private HotkeyCoordinator? _hotkeys;
     private TextInputBubbleWindow? _bubble;
     private ClickDetector? _mouse;
     private SfxPlayer? _sfx;
     private SoundTable? _sounds;
     private AgentRunner? _agent;
     private readonly PendingPointTracker _pending = new();
+
+    /// 에이전트의 진행 상황을 채팅 줄과 표정으로 옮긴다.
+    private AgentProgressPresenter? _presenter;
     private Puck.Interop.WinEventHook? _foreground;
 
     public PetBootstrap(SettingsStore settings) => _settings = settings;
@@ -129,9 +128,14 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             new ToolApprovals(new ChatApprovalPrompt(Chat)),
             AgentConfiguration.FromDisk);
 
-        _agent.Progress += OnAgentProgress;
+        _presenter = new AgentProgressPresenter(() => _chat);
+        _agent.Progress += _presenter.OnProgress;
 
-        RegisterHotkeys();
+        _hotkeys = new HotkeyCoordinator(HotkeyBindings.Defaults, new Dictionary<string, Action>
+        {
+            [nameof(HotkeyBindings.SummonPet)] = SummonToCursor,
+            [nameof(HotkeyBindings.TextInput)] = ShowInputBubble,
+        });
 
         _clock.Tick += OnFrame;
         _clock.Start();
@@ -236,22 +240,8 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
     /// 전역 핫키. 지금은 "펫 부르기"만 물린다 — 음성(PTT)과 입력 버블은
     /// 각각 Phase 6과 이 Phase의 뒤쪽 태스크가 채운다.
-    private void RegisterHotkeys()
-    {
-        _hotkeys = new GlobalHotkeyManager();
-        _hotkeys.RegisterAll(HotkeyBindings.Defaults, new Dictionary<string, Action>
-        {
-            [nameof(HotkeyBindings.SummonPet)] = SummonToCursor,
-            [nameof(HotkeyBindings.TextInput)] = ShowInputBubble,
-        });
-
-        if (_hotkeys.Unavailable.Count > 0)
-            AppLogger.Warning("hotkey", "다른 프로그램이 이미 쓰고 있어 등록하지 못한 핫키가 있습니다",
-                new Dictionary<string, object?> { ["names"] = string.Join(", ", _hotkeys.Unavailable) });
-    }
-
-    /// 펫 옆에 입력 버블을 띄운다. 받은 문장은 Phase 3의 에이전트가 가져간다 —
-    /// 지금은 로그에만 남긴다.
+    /// 펫 옆에 입력 버블을 띄운다. 받은 문장은 채팅 창으로 보낸 것과 같은
+    /// 곳으로 간다.
     private void ShowInputBubble()
     {
         if (_body is null || _avatar is null || _screens is null) return;
@@ -269,17 +259,12 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     /// 들어온다 — 어느 쪽으로 말을 걸어도 대화는 하나다.
     ///
     /// 답이 올 때까지 기다리는 동안에도 펫은 계속 돌아다녀야 하므로 기다리지
-    /// 않는다. 표정은 puck-linux가 브리지로 보내던 것과 같은 순서다:
-    /// 시작에 thinking, 끝나면 happy 또는 sad.
+    /// 않는다. 사람에게 보이는 것(줄과 표정)은 전부 presenter가 맡는다.
     private async Task AskAgentAsync(string text)
     {
-        if (_agent is null) return;
+        if (_agent is null || _presenter is null) return;
 
-        _chat?.Append(TranscriptKind.User, text);
-
-        // 한 턴이 얼마나 걸릴지는 아무도 모른다(도구를 열두 번까지 부른다).
-        // 그래서 시간을 정해 두지 않고, 끝날 때 다른 표정으로 덮는다.
-        _emotion.Hold(ThinkingClip);
+        _presenter.TurnStarted(text);
 
         try
         {
@@ -289,7 +274,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
             // 마지막 답은 이미 Progress의 Said로 한 번 나갔다. 여기서 또
             // 붙이면 같은 말이 두 줄이 된다.
-            _emotion.Show(HappyClip);
+            _presenter.TurnFinished();
         }
         catch (Exception ex)
         {
@@ -297,46 +282,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             AppLogger.Error("agent", "대화가 실패했습니다",
                 new Dictionary<string, object?> { ["error"] = ex.Message });
 
-            _chat?.Append(TranscriptKind.Error, $"{Strings.ChatFailed}: {ex.Message}");
-            _emotion.Show(SadClip);
-        }
-    }
-
-    /// 펫이 짓는 표정. 이름은 puck-linux가 브리지로 보내던 것 그대로다.
-    /// 아바타 매니페스트의 `emotions`에 없으면 idle로 떨어지므로, 표정이 없는
-    /// 아바타에서도 그림이 사라지지는 않는다.
-    private const string ThinkingClip = "thinking";
-    private const string HappyClip = "happy";
-    private const string SadClip = "sad";
-
-    /// 에이전트가 진행 중임을 펫의 몸과 채팅 창으로 보여 준다.
-    ///
-    /// 에이전트 루프는 스레드 풀을 오가므로 이 알림도 그럴 수 있다.
-    /// `ChatWindow.Append`가 알아서 UI 스레드로 넘긴다.
-    private void OnAgentProgress(AgentEvent progress)
-    {
-        switch (progress)
-        {
-            case AgentEvent.UsingTool using_:
-                AppLogger.Log(LogLevel.Debug, "agent", "도구를 씁니다",
-                    new Dictionary<string, object?> { ["tool"] = using_.Name });
-                _chat?.Append(TranscriptKind.Tool, string.Format(Strings.ChatUsingTool, using_.Name));
-                break;
-
-            // 성공한 도구는 이미 위에서 한 줄 나갔다. 실패만 덧붙인다 —
-            // 도구마다 두 줄씩 쌓이면 사람이 답을 찾지 못한다.
-            case AgentEvent.ToolDone { IsError: true } done:
-                _chat?.Append(TranscriptKind.Error, string.Format(Strings.ChatToolFailed, done.Name));
-                break;
-
-            case AgentEvent.Refused refused:
-                _chat?.Append(TranscriptKind.Notice, string.Format(Strings.ChatToolRefused, refused.Name));
-                break;
-
-            // 모델이 도구를 부르기 전에 하는 말("이거 볼게")도 답이다.
-            case AgentEvent.Said said:
-                _chat?.Append(TranscriptKind.Pet, said.Text);
-                break;
+            _presenter.TurnFailed(ex.Message);
         }
     }
 
@@ -477,7 +423,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         _pending.Expire(_stopwatch.Elapsed.TotalSeconds);
         _controller.Advance(dt);
-        ApplyEmotion(dt);
+        _presenter?.Advance(dt, _body, _controller);
         _body.UpdateBounce(_avatar.CurrentClipKey, _stopwatch.Elapsed);
 
         // 버블이 떠 있으면 펫을 따라온다. 한 번 놓고 두면 펫이 걸어 나간
@@ -486,25 +432,6 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         _window.MoveTo(_body.Position, _body.VisualBounds);
         _window.UpdateClickThrough(_avatar);
-    }
-
-    /// 표정이 있으면 상태가 고른 클립 위에 덮는다. **상태를 바꾸지는 않는다** —
-    /// 생각하는 동안에도 펫은 걷고 떨어진다. 시간이 다 되면 그때 한 번
-    /// 상태의 클립을 다시 걸어 원래대로 돌린다.
-    private void ApplyEmotion(double dt)
-    {
-        var clip = _emotion.Tick(dt);
-
-        if (clip is not null)
-        {
-            _body!.Play(clip, loop: true);
-            _emotionShowing = true;
-            return;
-        }
-
-        if (!_emotionShowing) return;
-        _emotionShowing = false;
-        _controller!.ReplayCurrentClip();
     }
 
     /// 사람이 눌렀다. 그림 위를 눌렀을 때만 제스처가 시작된다 — 여백을

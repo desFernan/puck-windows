@@ -64,43 +64,30 @@ public sealed class WalkState : IStateHandler
             return;
         }
 
-        var next = PetBounds.Contain(step.Position, context.VisualBounds, context.RoamableArea);
-
-        // RoamableArea는 경계 상자라 디스플레이 사이의 빈 공간도 포함한다.
-        // 그리로 한 걸음 내디디면 펫이 화면 밖으로 사라지므로 가장자리에서 선다.
-        // 발 한 점이 아니라 그림 좌우 끝을 보는 이유는, 경계에서 절반만
-        // 걸친 채 멈추면 그것도 "잘려 보이는" 것이기 때문이다.
-        if (!context.ArtworkHasGround(next))
+        switch (GroundStep.Take(step, context))
         {
-            // 옆 화면의 바닥이 위에 있으면 그 턱을 타고 올라간다. 없으면
-            // 여기가 세상 끝이니 그냥 선다.
-            var direction = _target >= body.Position.X ? 1.0 : -1.0;
-            if (Ledge is not null &&
-                context.LedgeBeyond(body.Position, direction, context.VisualBounds) is { } ledge)
-            {
-                Ledge.Target = ledge;
-                context.RequestTransition(StateKind.ClimbLedge);
+            case GroundStep.Outcome.OffWorld:
+                // 옆 화면의 바닥이 위에 있으면 그 턱을 타고 올라간다. 없으면
+                // 여기가 세상 끝이니 그냥 선다.
+                var direction = _target >= body.Position.X ? 1.0 : -1.0;
+                if (Ledge is not null &&
+                    context.LedgeBeyond(body.Position, direction, context.VisualBounds) is { } ledge)
+                {
+                    Ledge.Target = ledge;
+                    context.RequestTransition(StateKind.ClimbLedge);
+                    return;
+                }
+
+                context.RequestTransition(StateKind.Idle);
                 return;
-            }
 
-            context.RequestTransition(StateKind.Idle);
-            return;
+            case GroundStep.Outcome.Fell:
+                context.RequestTransition(StateKind.Fall);
+                return;
+
+            case GroundStep.Outcome.Arrived:
+                context.RequestTransition(StateKind.Idle);
+                return;
         }
-
-        body.Position = next;
-
-        // 걸어 나간 자리에 바닥이 없으면 떨어진다. Idle과 같은 판정.
-        var surfaceY = context.LandingY(body.Position);
-        if (surfaceY > body.Position.Y + IdleState.FootTolerance)
-        {
-            context.RequestTransition(StateKind.Fall);
-            return;
-        }
-
-        // 가장자리에 눌려 더 못 가는 경우도 도착으로 친다 — 아니면
-        // 벽에 붙어 걷는 클립을 영원히 재생한다.
-        var blocked = Math.Abs(body.Position.X - step.Position.X) > 0.001;
-        if (step.HasArrived || blocked)
-            context.RequestTransition(StateKind.Idle);
     }
 }

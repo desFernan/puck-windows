@@ -16,10 +16,6 @@ public interface IWanderDelegate
 /// 서 있기. 타이머가 차면 다음 행동을 요청하고, 발밑이 사라지면 떨어진다.
 public sealed class IdleState(WanderScheduler scheduler) : IStateHandler
 {
-    /// 발밑이 이 정도 어긋나는 건 서 있는 것으로 친다 — 반올림과
-    /// 픽셀 경계 때문에 정확히 같은 값이 나오지 않는다.
-    public const double FootTolerance = 4;
-
     public string Name => "Idle";
     public string ClipKey => "idle";
     public bool LoopsClip => true;
@@ -37,7 +33,7 @@ public sealed class IdleState(WanderScheduler scheduler) : IStateHandler
         // 창 윗면에 착지해 쉬던 펫이 그 창이 닫히면 영원히 공중에 떠 있었다.
         // landingY가 지금 위치보다 아래면 밑에 틈이 생긴 것이다.
         var surfaceY = context.LandingY(body.Position);
-        if (surfaceY > body.Position.Y + FootTolerance)
+        if (surfaceY > body.Position.Y + WindowSupport.FootTolerance)
         {
             // 받치던 것이 아예 사라졌으면 떨어지는 게 맞고, 창 **뒤로** 갔을
             // 뿐이면 아니다. 펫은 모든 창 위에 그려지므로, 그 창이 덮고 있는

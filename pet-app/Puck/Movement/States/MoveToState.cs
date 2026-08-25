@@ -39,26 +39,18 @@ public sealed class MoveToState : IStateHandler
         if (MovementSolver.FacingToward(body.Position, aim) is { } facing) body.Facing = facing;
 
         var step = MovementSolver.StepToward(body.Position, aim, dt, context.WalkSpeed);
-        var next = PetBounds.Contain(step.Position, context.VisualBounds, context.RoamableArea);
-
-        // 부르는 사람이 화면 밖을 가리켰을 수도 있다. 걷기와 같은 규칙으로 선다.
-        if (!context.ArtworkHasGround(next))
+        switch (GroundStep.Take(step, context))
         {
-            context.RequestTransition(StateKind.Idle);
-            return;
+            // 부르는 사람이 화면 밖을 가리켰을 수도 있다. 걷기와 달리 여기서는
+            // 턱을 타고 넘지 않는다 — 부른 자리가 아니라 갈 수 있는 데까지다.
+            case GroundStep.Outcome.OffWorld:
+            case GroundStep.Outcome.Arrived:
+                context.RequestTransition(StateKind.Idle);
+                return;
+
+            case GroundStep.Outcome.Fell:
+                context.RequestTransition(StateKind.Fall);
+                return;
         }
-
-        body.Position = next;
-
-        var surfaceY = context.LandingY(body.Position);
-        if (surfaceY > body.Position.Y + IdleState.FootTolerance)
-        {
-            context.RequestTransition(StateKind.Fall);
-            return;
-        }
-
-        var blocked = Math.Abs(body.Position.X - step.Position.X) > 0.001;
-        if (step.HasArrived || blocked)
-            context.RequestTransition(StateKind.Idle);
     }
 }

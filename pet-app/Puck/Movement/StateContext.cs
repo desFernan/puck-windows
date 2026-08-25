@@ -5,7 +5,7 @@ namespace Puck.Movement;
 
 /// 한 프레임 동안 상태가 볼 수 있고 할 수 있는 것.
 /// 모든 좌표는 가상 화면 물리 픽셀, 좌상단 원점, Y는 아래로.
-public sealed class StateContext
+public sealed record StateContext
 {
     public required CharacterBody Body { get; init; }
 
