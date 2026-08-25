@@ -55,10 +55,12 @@ public sealed class AnthropicAgentClient(Func<AgentConfiguration> configuration)
             var why = response.StopDetails?.Explanation ?? "이유가 오지 않았습니다";
             AppLogger.Warning("agent", "모델이 요청을 거절했습니다",
                 new Dictionary<string, object?> { ["category"] = response.StopDetails?.Category?.ToString() });
-            return new AgentTurn([new AgentBlock.Text($"그건 답할 수 없어요. ({why})")], WantsToolUse: false);
+            return new AgentTurn([new AgentBlock.Text($"그건 답할 수 없어요. ({why})")]);
         }
 
-        return new AgentTurn(FromSdk(response.Content), response.StopReason == "tool_use");
+        // `stop_reason`은 넘기지 않는다. 도구를 더 부를 것인지는 블록이 말해 준다 —
+        // 응답이 `max_tokens`로 잘려도 그 안의 `tool_use`에는 답을 붙여야 한다.
+        return new AgentTurn(FromSdk(response.Content));
     }
 
     private static Effort EffortFrom(string raw) => raw.Trim().ToLowerInvariant() switch

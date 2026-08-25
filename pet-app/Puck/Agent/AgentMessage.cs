@@ -33,11 +33,14 @@ public sealed record AgentMessage(AgentRole Role, IReadOnlyList<AgentBlock> Bloc
 }
 
 /// 모델이 한 번 답한 결과.
-public sealed record AgentTurn(
-    IReadOnlyList<AgentBlock> Blocks,
-    /// 도구를 부르려고 멈춘 것인가. 루프가 이걸 보고 한 바퀴 더 돈다.
-    bool WantsToolUse)
+///
+/// 도구를 더 부를 것인지는 **블록에서만** 읽는다. `stop_reason`을 따로 들고
+/// 다니면 둘이 어긋날 수 있는데(`max_tokens`로 잘린 응답에도 `tool_use`가
+/// 들어 있다), 그때 짝 없는 부름이 기록에 남아 이후 대화가 통째로 거절된다.
+public sealed record AgentTurn(IReadOnlyList<AgentBlock> Blocks)
 {
+    public bool WantsToolUse => ToolUses.Any();
+
     public IEnumerable<AgentBlock.ToolUse> ToolUses => Blocks.OfType<AgentBlock.ToolUse>();
 
     public string TextContent =>

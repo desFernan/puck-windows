@@ -42,6 +42,19 @@ internal sealed class FakeTool(string name, Func<string> result, ToolApproval ap
     }
 }
 
+/// 두 번째 부름에서 무너지는 모델. 끊긴 네트워크와 취소를 흉내 낸다.
+internal sealed class FailsAfter(int successes, params AgentTurn[] turns) : IAgentClient
+{
+    private int _next;
+
+    public Task<AgentTurn> SendAsync(string systemPrompt, IReadOnlyList<AgentMessage> messages,
+                                     IReadOnlyList<ToolSpec> tools, CancellationToken cancellation)
+    {
+        if (_next >= successes) throw new HttpRequestException("끊겼다");
+        return Task.FromResult(turns[_next++]);
+    }
+}
+
 internal sealed class AlwaysAllow : IApprovalPrompt
 {
     public Task<bool> RequestAsync(string t, IReadOnlyDictionary<string, JsonElement> a, CancellationToken c)
@@ -62,7 +75,7 @@ public class AgentRunnerTests
     [Fact]
     public async Task WithNoApiKeyItSaysSoInsteadOfDoingNothing()
     {
-        var runner = Make(new ScriptedClient(new AgentTurn([new AgentBlock.Text("hi")], false)),
+        var runner = Make(new ScriptedClient(new AgentTurn([new AgentBlock.Text("hi")])),
             ToolRegistry.Of(), config: new AgentConfiguration());
 
         var answer = await runner.AskAsync("안녕");
@@ -73,7 +86,7 @@ public class AgentRunnerTests
     [Fact]
     public async Task APlainAnswerComesStraightBack()
     {
-        var runner = Make(new ScriptedClient(new AgentTurn([new AgentBlock.Text("안녕!")], false)),
+        var runner = Make(new ScriptedClient(new AgentTurn([new AgentBlock.Text("안녕!")])),
             ToolRegistry.Of());
 
         Assert.Equal("안녕!", await runner.AskAsync("안녕"));
@@ -84,8 +97,8 @@ public class AgentRunnerTests
     {
         var tool = new FakeTool("peek", () => "창 세 개");
         var client = new ScriptedClient(
-            new AgentTurn([Call("t1", "peek")], WantsToolUse: true),
-            new AgentTurn([new AgentBlock.Text("창이 셋 있어")], WantsToolUse: false));
+            new AgentTurn([Call("t1", "peek")]),
+            new AgentTurn([new AgentBlock.Text("창이 셋 있어")]));
 
         var runner = Make(client, ToolRegistry.Of((tool.Spec, tool)));
         var answer = await runner.AskAsync("뭐 보여?");
@@ -100,8 +113,8 @@ public class AgentRunnerTests
         // 나눠 보내면 모델이 도구를 하나씩만 부르는 쪽으로 배운다.
         var tool = new FakeTool("peek", () => "ok");
         var client = new ScriptedClient(
-            new AgentTurn([Call("t1", "peek"), Call("t2", "peek")], WantsToolUse: true),
-            new AgentTurn([new AgentBlock.Text("끝")], WantsToolUse: false));
+            new AgentTurn([Call("t1", "peek"), Call("t2", "peek")]),
+            new AgentTurn([new AgentBlock.Text("끝")]));
 
         var runner = Make(client, ToolRegistry.Of((tool.Spec, tool)));
         await runner.AskAsync("두 번 해 줘");
@@ -121,8 +134,8 @@ public class AgentRunnerTests
         // 짝이 안 맞으면 다음 요청이 통째로 거절된다.
         var tool = new FakeTool("peek", () => "ok");
         var client = new ScriptedClient(
-            new AgentTurn([Call("a", "peek"), Call("b", "peek")], WantsToolUse: true),
-            new AgentTurn([new AgentBlock.Text("끝")], WantsToolUse: false));
+            new AgentTurn([Call("a", "peek"), Call("b", "peek")]),
+            new AgentTurn([new AgentBlock.Text("끝")]));
 
         await Make(client, ToolRegistry.Of((tool.Spec, tool))).AskAsync("x");
 
@@ -138,8 +151,8 @@ public class AgentRunnerTests
     {
         var tool = new FakeTool("boom", () => throw new InvalidOperationException("펑"));
         var client = new ScriptedClient(
-            new AgentTurn([Call("t1", "boom")], WantsToolUse: true),
-            new AgentTurn([new AgentBlock.Text("실패했대")], WantsToolUse: false));
+            new AgentTurn([Call("t1", "boom")]),
+            new AgentTurn([new AgentBlock.Text("실패했대")]));
 
         var answer = await Make(client, ToolRegistry.Of((tool.Spec, tool))).AskAsync("해 봐");
 
@@ -153,8 +166,8 @@ public class AgentRunnerTests
     public async Task AnUnknownToolIsAnErrorResultSoTheModelCanCorrectItself()
     {
         var client = new ScriptedClient(
-            new AgentTurn([Call("t1", "없는도구")], WantsToolUse: true),
-            new AgentTurn([new AgentBlock.Text("아 없구나")], WantsToolUse: false));
+            new AgentTurn([Call("t1", "없는도구")]),
+            new AgentTurn([new AgentBlock.Text("아 없구나")]));
 
         await Make(client, ToolRegistry.Of()).AskAsync("x");
 
@@ -167,8 +180,8 @@ public class AgentRunnerTests
     {
         var tool = new FakeTool("danger", () => "실행됨", ToolApproval.Required);
         var client = new ScriptedClient(
-            new AgentTurn([Call("t1", "danger")], WantsToolUse: true),
-            new AgentTurn([new AgentBlock.Text("알겠어")], WantsToolUse: false));
+            new AgentTurn([Call("t1", "danger")]),
+            new AgentTurn([new AgentBlock.Text("알겠어")]));
 
         var runner = Make(client, ToolRegistry.Of((tool.Spec, tool)), new DenyingApprovalPrompt());
         await runner.AskAsync("위험한 거 해 줘");
@@ -182,7 +195,7 @@ public class AgentRunnerTests
     public async Task AModelThatNeverStopsCallingToolsIsCutOff()
     {
         var tool = new FakeTool("loop", () => "또 해");
-        var client = new ScriptedClient(new AgentTurn([Call("t", "loop")], WantsToolUse: true));
+        var client = new ScriptedClient(new AgentTurn([Call("t", "loop")]));
 
         var answer = await Make(client, ToolRegistry.Of((tool.Spec, tool))).AskAsync("무한히");
 
@@ -195,8 +208,8 @@ public class AgentRunnerTests
     {
         var tool = new FakeTool("peek", () => "ok");
         var client = new ScriptedClient(
-            new AgentTurn([new AgentBlock.Text("볼게"), Call("t1", "peek")], WantsToolUse: true),
-            new AgentTurn([new AgentBlock.Text("끝")], WantsToolUse: false));
+            new AgentTurn([new AgentBlock.Text("볼게"), Call("t1", "peek")]),
+            new AgentTurn([new AgentBlock.Text("끝")]));
 
         var runner = Make(client, ToolRegistry.Of((tool.Spec, tool)));
         var events = new List<AgentEvent>();
@@ -212,7 +225,7 @@ public class AgentRunnerTests
     [Fact]
     public async Task TheConversationCarriesAcrossTurns()
     {
-        var client = new ScriptedClient(new AgentTurn([new AgentBlock.Text("응")], false));
+        var client = new ScriptedClient(new AgentTurn([new AgentBlock.Text("응")]));
         var runner = Make(client, ToolRegistry.Of());
 
         await runner.AskAsync("첫 번째");
@@ -224,9 +237,132 @@ public class AgentRunnerTests
     }
 
     [Fact]
+    public async Task AFailedTurnLeavesNoTraceInTheHistory()
+    {
+        // 답 없는 user 메시지가 남으면 다음 요청이 통째로 거절된다. 한 번
+        // 끊긴 것으로 펫이 영영 벙어리가 되면 안 된다.
+        var runner = Make(new FailsAfter(0), ToolRegistry.Of());
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => runner.AskAsync("안녕"));
+
+        Assert.Empty(runner.History);
+    }
+
+    [Fact]
+    public async Task AFailureMidToolLoopDoesNotLeaveADanglingToolUse()
+    {
+        // 결과가 짝지어지지 않은 tool_use가 기록에 남으면 그 뒤의 모든
+        // 요청이 400으로 돌아온다.
+        var tool = new FakeTool("peek", () => "ok");
+        var client = new FailsAfter(1, new AgentTurn([Call("t1", "peek")]));
+
+        var runner = Make(client, ToolRegistry.Of((tool.Spec, tool)));
+        await Assert.ThrowsAsync<HttpRequestException>(() => runner.AskAsync("봐 줘"));
+
+        Assert.DoesNotContain(runner.History.SelectMany(m => m.Blocks), b => b is AgentBlock.ToolUse);
+        Assert.Empty(runner.History);
+    }
+
+    [Fact]
+    public async Task ToolCallsAreAnsweredEvenWhenTheTurnLooksFinished()
+    {
+        // max_tokens로 잘린 응답에도 tool_use가 들어 있다. 블록을 보고
+        // 정하지 않으면 그 부름이 답 없이 기록에 남는다.
+        var tool = new FakeTool("peek", () => "ok");
+        var client = new ScriptedClient(
+            new AgentTurn([Call("t1", "peek")]),
+            new AgentTurn([new AgentBlock.Text("끝")]));
+
+        await Make(client, ToolRegistry.Of((tool.Spec, tool))).AskAsync("x");
+
+        Assert.Equal(1, tool.Calls);
+    }
+
+    [Fact]
+    public async Task RolesStillAlternateAfterTheRoundLimit()
+    {
+        // 도구 결과로 끝난 기록 뒤에 다음 질문을 붙이면 user가 연달아 둘이 된다.
+        var tool = new FakeTool("loop", () => "또 해");
+        var runner = Make(new ScriptedClient(new AgentTurn([Call("t", "loop")])),
+            ToolRegistry.Of((tool.Spec, tool)));
+
+        await runner.AskAsync("무한히");
+
+        Assert.Collection(runner.History,
+            m => Assert.Equal(AgentRole.User, m.Role),
+            m => Assert.Equal(AgentRole.Assistant, m.Role));
+        Assert.DoesNotContain(runner.History.SelectMany(m => m.Blocks), b => b is AgentBlock.ToolResult);
+    }
+
+    [Fact]
+    public async Task ATurnThatOnlyThinksStillSaysSomething()
+    {
+        var client = new ScriptedClient(new AgentTurn([new AgentBlock.Thinking("음…", "sig")]));
+
+        Assert.False(string.IsNullOrWhiteSpace(await Make(client, ToolRegistry.Of()).AskAsync("x")));
+    }
+
+    // --- 기록 다듬기 ---
+
+    private static List<AgentMessage> Exchange(string question) =>
+    [
+        AgentMessage.FromUser(question),
+        new AgentMessage(AgentRole.Assistant, [Call("t", "peek")]),
+        new AgentMessage(AgentRole.User, [new AgentBlock.ToolResult("t", "ok")]),
+        new AgentMessage(AgentRole.Assistant, [new AgentBlock.Text("답")]),
+    ];
+
+    [Fact]
+    public void AShortConversationIsLeftAlone()
+    {
+        var history = Exchange("하나").Concat(Exchange("둘")).ToList();
+        var before = history.ToList();
+
+        AgentRunner.Trim(history);
+
+        Assert.Equal(before, history);
+    }
+
+    [Fact]
+    public void ALongConversationIsCutAtAQuestionNotInTheMiddleOfToolResults()
+    {
+        // 도구 결과 한가운데를 자르면 짝 없는 tool_use가 맨 앞에 남는다.
+        var history = Enumerable.Range(0, 20).SelectMany(i => Exchange($"질문 {i}")).ToList();
+
+        AgentRunner.Trim(history);
+
+        Assert.True(history.Count <= AgentRunner.MaxHistoryMessages);
+        Assert.Equal(AgentRole.User, history[0].Role);
+        Assert.DoesNotContain(history[0].Blocks, b => b is AgentBlock.ToolResult);
+
+        // 남은 것 안에서 모든 부름은 짝이 있다.
+        var uses = history.SelectMany(m => m.Blocks).OfType<AgentBlock.ToolUse>().Select(u => u.Id);
+        var results = history.SelectMany(m => m.Blocks).OfType<AgentBlock.ToolResult>().Select(r => r.ToolUseId);
+        Assert.Equal(uses.Count(), results.Count());
+    }
+
+    [Fact]
+    public void AConversationWithNowhereSafeToCutIsLeftWhole()
+    {
+        // 한 번 묻고 도구만 계속 오간 대화. 새 질문이 맨 앞 하나뿐이라
+        // 안전하게 자를 자리가 없다 — 그럴 땐 그냥 둔다.
+        var history = new List<AgentMessage> { AgentMessage.FromUser("한 번만 묻고") };
+        for (var i = 0; i < AgentRunner.MaxHistoryMessages; i++)
+        {
+            history.Add(new AgentMessage(AgentRole.Assistant, [Call($"t{i}", "peek")]));
+            history.Add(new AgentMessage(AgentRole.User, [new AgentBlock.ToolResult($"t{i}", "ok")]));
+        }
+
+        var count = history.Count;
+        AgentRunner.Trim(history);
+
+        Assert.Equal(count, history.Count);
+    }
+
+    [Fact]
     public async Task WithNoToolsTheShorterPromptIsUsed()
     {
-        var client = new ScriptedClient(new AgentTurn([new AgentBlock.Text("응")], false));
+        var client = new ScriptedClient(new AgentTurn([new AgentBlock.Text("응")]));
         await Make(client, ToolRegistry.Of()).AskAsync("x");
         Assert.Empty(client.ToolsOffered[0]);
     }

@@ -46,9 +46,35 @@ public sealed class CaptureScreenHandler(Func<Rect> virtualScreen) : IToolHandle
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, $"capture-{DateTime.Now:yyyyMMdd-HHmmss-fff}.png");
         File.WriteAllBytes(path, png);
+        DropOldCaptures(directory);
 
         return Task.FromResult(
             $"{region.Width}x{region.Height} 영역을 찍어 저장했습니다: {path}");
+    }
+
+    /// 남겨 두는 장수. 사람이 지우라고 배운 적 없는 폴더라, 대화 한 번에 몇
+    /// 장씩 쌓이면 아무도 모르는 채로 디스크를 먹는다.
+    private const int KeepCaptures = 20;
+
+    private static void DropOldCaptures(string directory)
+    {
+        try
+        {
+            var old = Directory.EnumerateFiles(directory, "capture-*.png")
+                               .OrderByDescending(f => f, StringComparer.Ordinal)
+                               .Skip(KeepCaptures)
+                               .ToList();
+
+            // 이름이 곧 찍은 시각이라 이름 순서가 시간 순서다 — 파일 정보를
+            // 하나씩 물어보지 않아도 된다.
+            foreach (var file in old) File.Delete(file);
+        }
+        catch (Exception ex)
+        {
+            // 청소에 실패했다고 찍은 것을 못 돌려줄 이유는 없다.
+            AppLogger.Warning("capture", "오래된 캡처를 지우지 못했습니다",
+                new Dictionary<string, object?> { ["error"] = ex.Message });
+        }
     }
 
     private static Int32Rect Whole(Rect screen)

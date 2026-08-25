@@ -87,7 +87,10 @@ public sealed class LaunchAppHandler : IToolHandler
             ["app_name"] = ToolSpec.Param("string", "실행 파일 이름, 경로, 또는 프로토콜 URI."),
         },
         Required = ["app_name"],
-        Approval = ToolApproval.NotRequired,
+        // 이름만 받는 것처럼 보이지만 전체 경로도, 프로토콜 URI도 받는다 —
+        // 즉 아무 실행 파일이나 띄울 수 있다. 이걸 묻지 않고 지나가게 두면
+        // 셸을 승인 뒤에 두는 일이 뜻을 잃는다(그냥 띄우면 되니까).
+        Approval = ToolApproval.Required,
     };
 
     public Task<string> ExecuteAsync(IReadOnlyDictionary<string, JsonElement> arguments, CancellationToken cancellation)
@@ -202,7 +205,15 @@ public sealed class RunPowerShellHandler(string toolName, string argumentName) :
         return Convert.ToBase64String(Encoding.Unicode.GetBytes(preamble + script));
     }
 
-    /// 모델의 창을 명령 하나의 출력으로 채우지 않는다.
-    private static string Truncate(string text, int limit = 8000)
-        => text.Length <= limit ? text : text[..limit] + $"\n… ({text.Length - limit}자 잘림)";
+    /// 명령 하나의 출력으로 모델의 창을 채우지 않는다. 잘린 쪽은 **앞머리를
+    /// 남긴다** — 오류 메시지도, 목록의 첫 줄도 앞에 있다.
+    ///
+    /// 대화 기록은 마흔 장까지 쌓이고(AgentRunner.MaxHistoryMessages) 그
+    /// 전부가 매 요청에 다시 실려 나가므로, 한 번의 출력이 그 예산의 한
+    /// 자리를 넘게 먹으면 안 된다. 한글은 토큰당 글자 수가 영어의 절반쯤이라
+    /// 6000자면 대략 4천~6천 토큰이다.
+    private const int OutputLimit = 6000;
+
+    private static string Truncate(string text, int limit = OutputLimit)
+        => text.Length <= limit ? text : text[..limit] + $"\n… (뒤 {text.Length - limit}자 잘림)";
 }

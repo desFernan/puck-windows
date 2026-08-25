@@ -12,12 +12,16 @@ public sealed class ToolRegistry
     private readonly Dictionary<string, (ToolSpec Spec, IToolHandler Handler)> _tools;
 
     private ToolRegistry(IEnumerable<(ToolSpec, IToolHandler)> tools)
-        => _tools = tools.ToDictionary(t => t.Item1.Name, t => (t.Item1, t.Item2), StringComparer.Ordinal);
+    {
+        _tools = tools.ToDictionary(t => t.Item1.Name, t => (t.Item1, t.Item2), StringComparer.Ordinal);
+        Specs = _tools.Values.Select(t => t.Spec).ToList();
+        Handlers = _tools.ToDictionary(t => t.Key, t => t.Value.Handler, StringComparer.Ordinal);
+    }
 
-    public IReadOnlyList<ToolSpec> Specs => _tools.Values.Select(t => t.Spec).ToList();
+    /// 도구 목록은 만들어진 뒤 바뀌지 않는다. 매 턴 다시 짓지 않는다.
+    public IReadOnlyList<ToolSpec> Specs { get; }
 
-    public IReadOnlyDictionary<string, IToolHandler> Handlers =>
-        _tools.ToDictionary(t => t.Key, t => t.Value.Handler, StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, IToolHandler> Handlers { get; }
 
     public ToolSpec? SpecFor(string name) => _tools.TryGetValue(name, out var t) ? t.Spec : null;
 

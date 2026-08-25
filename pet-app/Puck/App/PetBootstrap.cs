@@ -101,7 +101,9 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         // 다시 읽는다 — .env에 키를 넣은 사람이 앱을 끄지 않아도 되게.
         var registry = ToolRegistry.CreateDefault(
             windows: () => _windows?.Windows ?? [],
-            virtualScreen: () => _screens?.Bounds ?? new Rect(0, 0, 1920, 1080),
+            // 도구는 스레드 풀에서 돈다. 화면 구성은 통째로 갈아 끼우는
+            // 불변 기록이라, 갈아 끼운 것이 제때 보이기만 하면 된다.
+            virtualScreen: () => Volatile.Read(ref _screens)?.Bounds ?? new Rect(0, 0, 1920, 1080),
             pointAt: PointPetAt);
 
         _agent = new AgentRunner(
@@ -147,7 +149,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             return;
         }
 
-        _screens ??= ScreenSpace.Current();
+        if (_screens is null) Volatile.Write(ref _screens, ScreenSpace.Current());
         if (_screens is null) return;
 
         var start = _body?.Position ?? StartPosition(_screens);
@@ -398,7 +400,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         // 디스플레이 구성이 바뀌었을 수 있다. 목록이 비면(전부 잠듦)
         // 마지막으로 알던 것을 그대로 쓴다.
-        _screens = ScreenSpace.Current() ?? _screens;
+        Volatile.Write(ref _screens, ScreenSpace.Current() ?? _screens);
 
         _pending.Expire(_stopwatch.Elapsed.TotalSeconds);
         _controller.Advance(dt);

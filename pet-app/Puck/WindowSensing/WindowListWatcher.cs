@@ -73,8 +73,12 @@ public sealed class WindowListWatcher : IDisposable
             () => uptime.Elapsed.TotalSeconds);
     }
 
-    /// 앞에서 뒤 순서. 프레임 루프가 매 프레임 읽는다.
-    public IReadOnlyList<WindowInfo> Windows { get; private set; } = [];
+    private IReadOnlyList<WindowInfo> _windows = [];
+
+    /// 앞에서 뒤 순서. 프레임 루프가 매 프레임 읽고, 에이전트의 도구는
+    /// 스레드 풀에서 읽는다. 목록은 고쳐 쓰지 않고 **통째로 갈아 끼우므로**
+    /// 참조 하나만 제때 보이면 된다 — 그래서 잠금 대신 Volatile이면 충분하다.
+    public IReadOnlyList<WindowInfo> Windows => Volatile.Read(ref _windows);
 
     public void Start()
     {
@@ -115,7 +119,7 @@ public sealed class WindowListWatcher : IDisposable
     {
         try
         {
-            Windows = _source();
+            Volatile.Write(ref _windows, _source());
         }
         catch (Exception ex)
         {

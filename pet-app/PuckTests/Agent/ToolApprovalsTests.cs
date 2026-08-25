@@ -43,6 +43,28 @@ public class ToolApprovalsTests
     }
 
     [Theory]
+    [InlineData("git push origin main")]
+    [InlineData("git reset --hard HEAD~5")]
+    [InlineData("git clean -fdx")]
+    [InlineData("git -C C:/repo push")]
+    [InlineData("git")]
+    public void GitCommandsThatChangeTheRepositoryStillAsk(string command)
+    {
+        // `git`은 읽기도 쓰기도 한다. 첫 낱말만 보면 `git push`가 `git status`와
+        // 구분되지 않는다.
+        Assert.False(ToolApprovals.IsAllowlistedCommand(command));
+    }
+
+    [Theory]
+    [InlineData("git log --oneline -20")]
+    [InlineData("git diff HEAD~1")]
+    [InlineData("git show abc123")]
+    public void ReadOnlyGitStillGoesThrough(string command)
+    {
+        Assert.True(ToolApprovals.IsAllowlistedCommand(command));
+    }
+
+    [Theory]
     [InlineData("del *")]
     [InlineData("shutdown /s")]
     [InlineData("")]
@@ -58,9 +80,22 @@ public class ToolApprovalsTests
     [InlineData("dir | Remove-Item")]
     [InlineData("echo x > C:/important.txt")]
     [InlineData("echo `whoami`")]
+    [InlineData("echo $(Remove-Item C:/x)")]
+    [InlineData("git status $env:USERPROFILE")]
     public void ChainingDefeatsTheAllowlist(string command)
     {
         // 이어붙인 명령의 첫 낱말은 안전해 보인다. 그것만 보면 통과한다.
+        Assert.False(ToolApprovals.IsAllowlistedCommand(command));
+    }
+
+    [Theory]
+    [InlineData("git log\nRemove-Item -Recurse C:/important")]
+    [InlineData("dir\r\nshutdown /s")]
+    [InlineData("echo hi\n")]
+    public void ANewLineIsAlsoAChain(string command)
+    {
+        // run_shell은 한 줄짜리 도구다. 첫 줄만 보고 통과시키면 그 아래에
+        // 무엇이든 붙일 수 있다 — PowerShell은 줄바꿈을 명령 구분자로 읽는다.
         Assert.False(ToolApprovals.IsAllowlistedCommand(command));
     }
 
