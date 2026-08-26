@@ -35,6 +35,10 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
     /// 펫과 글로 말하는 창. 트레이에서 열거나, 승인을 물어야 할 때 저절로 뜬다.
     private ChatWindow? _chat;
+
+    /// 지난 프레임에 펫이 걷던 세계의 크기. 이것이 바뀌면 딛고 있던 바닥이
+    /// 사라졌을 수 있다.
+    private Rect? _lastRoamableArea;
     private ReactDragState? _drag;
     private TrayIcon? _tray;
     private WindowListWatcher? _windows;
@@ -420,6 +424,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         // 디스플레이 구성이 바뀌었을 수 있다. 목록이 비면(전부 잠듦)
         // 마지막으로 알던 것을 그대로 쓴다.
         Volatile.Write(ref _screens, ScreenSpace.Current() ?? _screens);
+        PutDownAfterDisplayChange();
 
         _pending.Expire(_stopwatch.Elapsed.TotalSeconds);
         _controller.Advance(dt);
@@ -432,6 +437,28 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         _window.MoveTo(_body.Position, _body.VisualBounds);
         _window.UpdateClickThrough(_avatar);
+    }
+
+    /// 세계가 다시 재어졌으면 서 있던 펫을 새 바닥에 내려놓는다.
+    ///
+    /// 화면이 짧아진 쪽은 가두기가 알아서 하지만, 길어진 쪽은 아무 일도
+    /// 일어나지 않아 펫이 옛 바닥이 있던 선 위에 남는다. 다음 프레임에
+    /// 떨어지기는 하지만, 해상도를 바꿨다고 펫이 화면 절반을 낙하하는 것은
+    /// 물리가 아니라 고장으로 읽힌다.
+    private void PutDownAfterDisplayChange()
+    {
+        if (_screens is null || _body is null || _avatar is null || _controller is null) return;
+
+        var area = _screens.RoamableArea;
+        var previous = _lastRoamableArea;
+        _lastRoamableArea = area;
+
+        // 첫 프레임은 "바뀐" 것이 아니다 — 시작 위치를 덮어쓰면 안 된다.
+        if (previous is not { } was || was == area) return;
+        if (!DisplayChangeRelocation.StandsOnGround(_controller.Current)) return;
+
+        _body.Position = DisplayChangeRelocation.Standing(
+            _body.Position, _body.VisualBounds, area, LandingY);
     }
 
     /// 사람이 눌렀다. 그림 위를 눌렀을 때만 제스처가 시작된다 — 여백을
