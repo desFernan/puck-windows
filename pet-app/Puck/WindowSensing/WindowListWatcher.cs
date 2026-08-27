@@ -40,16 +40,24 @@ public sealed class DispatcherWatcherTicker : IWatcherTicker
 /// (포그라운드 변경)에는 잠깐 더 자주 본다. 그때가 목록이 가장 많이 흔들린다.
 public sealed class WindowListWatcher : IDisposable
 {
-    public const double IdlePollHz = 10;
-    public const double BurstPollHz = 15;
     public const double BurstSeconds = 3;
 
     private readonly Func<IReadOnlyList<WindowInfo>> _source;
     private readonly IWatcherTicker _ticker;
     private readonly Func<double> _now;
+    private readonly WindowPollPolicy _policy = new();
 
     private double? _burstEnd;
+    private double _currentHz;
+    private double _lastTickAt;
     private bool _disposed;
+
+    /// 펫이 창 목록을 읽지 않는 상태인가 — 어딘가에 서서 쉬는 중이거나,
+    /// 치워져 있거나. 그럴 때만 주기를 늦춘다.
+    ///
+    /// 워처가 펫을 아는 대신 물어보는 이유는, 창 감지가 움직임에 기대면
+    /// 둘을 따로 시험할 수 없기 때문이다.
+    public Func<bool> PetIsResting { get; set; } = () => false;
 
     public WindowListWatcher(
         Func<IReadOnlyList<WindowInfo>> source,
@@ -83,7 +91,8 @@ public sealed class WindowListWatcher : IDisposable
     public void Start()
     {
         Refresh();
-        _ticker.Start(IdlePollHz);
+        _lastTickAt = _now();
+        Apply(WindowPollPolicy.ActiveHz);
     }
 
     /// 포그라운드 창이 바뀌었다 — 지금 한 번 더 보고, 잠깐 더 자주 본다.
@@ -92,7 +101,7 @@ public sealed class WindowListWatcher : IDisposable
         if (_disposed) return;
         Refresh();
         _burstEnd = _now() + BurstSeconds;
-        _ticker.Start(BurstPollHz);
+        Apply(WindowPollPolicy.BurstHz);
     }
 
     public void Dispose()
@@ -110,9 +119,24 @@ public sealed class WindowListWatcher : IDisposable
 
         Refresh();
 
-        if (_burstEnd is not { } end || _now() < end) return;
-        _burstEnd = null;
-        _ticker.Start(IdlePollHz);
+        var now = _now();
+        var dt = now - _lastTickAt;
+        _lastTickAt = now;
+
+        var bursting = _burstEnd is { } end && now < end;
+        if (!bursting) _burstEnd = null;
+
+        Apply(_policy.Hertz(PetIsResting(), bursting, dt));
+    }
+
+    /// 주기가 실제로 달라졌을 때만 타이머를 다시 건다 — 매 틱 다시 걸면
+    /// 아끼려던 것을 그 자리에서 도로 쓴다.
+    private void Apply(double hz)
+    {
+        if (Math.Abs(hz - _currentHz) < 0.001) return;
+
+        _currentHz = hz;
+        _ticker.Start(hz);
     }
 
     private void Refresh()

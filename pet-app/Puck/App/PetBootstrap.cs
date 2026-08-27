@@ -79,6 +79,10 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         // 창을 먼저 보기 시작한다 — 첫 프레임에 이미 목록이 있어야 펫이
         // 바닥에서 시작했다가 창 위로 튀어 오르지 않는다.
         _windows = WindowListWatcher.CreateDefault();
+        // 쉬는 펫은 창 목록에 기대는 일을 하지 않는다. 치워 둔 펫도 마찬가지다 —
+        // 보이지도 않는 펫을 위해 초당 열 번 창을 세는 것은 순전한 낭비다.
+        _windows.PetIsResting = () =>
+            _window?.IsVisible != true || _controller?.Current == StateKind.Idle;
         _windows.Start();
         _foreground = new Puck.Interop.WinEventHook(() => _windows?.NoteForegroundChanged());
 

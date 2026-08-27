@@ -106,7 +106,7 @@ public sealed class RunPowerShellHandler(string toolName, string argumentName) :
     /// 명령 하나의 출력으로 모델의 창을 채우지 않는다. 잘린 쪽은 **앞머리를
     /// 남긴다** — 오류 메시지도, 목록의 첫 줄도 앞에 있다.
     ///
-    /// 대화 기록은 마흔 장까지 쌓이고(AgentRunner.MaxHistoryMessages) 그
+    /// 대화 기록은 마흔 장까지 쌓이고(AgentConversation.MaxMessages) 그
     /// 전부가 매 요청에 다시 실려 나가므로, 한 번의 출력이 그 예산의 한
     /// 자리를 넘게 먹으면 안 된다. 한글은 토큰당 글자 수가 영어의 절반쯤이라
     /// 6000자면 대략 4천~6천 토큰이다.

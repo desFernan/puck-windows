@@ -31,7 +31,7 @@ public class WindowListWatcherTests
 
         Assert.Equal(1, reads);
         Assert.Single(watcher.Windows);
-        Assert.Equal(WindowListWatcher.IdlePollHz, ticker.Hz);
+        Assert.Equal(WindowPollPolicy.ActiveHz, ticker.Hz);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class WindowListWatcherTests
 
         watcher.NoteForegroundChanged();
 
-        Assert.Equal(WindowListWatcher.BurstPollHz, ticker.Hz);
+        Assert.Equal(WindowPollPolicy.BurstHz, ticker.Hz);
     }
 
     [Fact]
@@ -70,12 +70,76 @@ public class WindowListWatcherTests
         watcher.Start();
 
         watcher.NoteForegroundChanged();
-        Assert.Equal(WindowListWatcher.BurstPollHz, ticker.Hz);
+        Assert.Equal(WindowPollPolicy.BurstHz, ticker.Hz);
 
         now = WindowListWatcher.BurstSeconds + 0.1;
         ticker.Fire();
 
-        Assert.Equal(WindowListWatcher.IdlePollHz, ticker.Hz);
+        Assert.Equal(WindowPollPolicy.ActiveHz, ticker.Hz);
+    }
+
+    [Fact]
+    public void ASittingPetEventuallySlowsThePolling()
+    {
+        // 초당 열 번 창을 세는 것이 쉬는 앱이 하는 일의 대부분이었다.
+        var ticker = new FakeTicker();
+        double now = 0;
+        var watcher = new WindowListWatcher(() => [Window(1)], ticker, () => now)
+        {
+            PetIsResting = () => true,
+        };
+        watcher.Start();
+
+        // 문턱을 넘기 전까지는 그대로다.
+        now = WindowPollPolicy.DefaultThreshold - 0.5;
+        ticker.Fire();
+        Assert.Equal(WindowPollPolicy.ActiveHz, ticker.Hz);
+
+        now = WindowPollPolicy.DefaultThreshold + 0.5;
+        ticker.Fire();
+        Assert.Equal(WindowPollPolicy.RestingHz, ticker.Hz);
+    }
+
+    [Fact]
+    public void AMovingPetGetsTheFasterRateBackAtOnce()
+    {
+        // 천천히 올리면 걷기의 첫 걸음이 쉴 때의 목록을 보고 내디딘다.
+        var ticker = new FakeTicker();
+        double now = 0;
+        var resting = true;
+        var watcher = new WindowListWatcher(() => [Window(1)], ticker, () => now)
+        {
+            PetIsResting = () => resting,
+        };
+        watcher.Start();
+
+        now = WindowPollPolicy.DefaultThreshold + 1;
+        ticker.Fire();
+        Assert.Equal(WindowPollPolicy.RestingHz, ticker.Hz);
+
+        resting = false;
+        ticker.Fire();
+        Assert.Equal(WindowPollPolicy.ActiveHz, ticker.Hz);
+    }
+
+    [Fact]
+    public void ABurstOutranksResting()
+    {
+        // 창 목록이 지금 바뀌는 중이고, 그게 버스트가 있는 이유 전부다.
+        var ticker = new FakeTicker();
+        double now = 0;
+        var watcher = new WindowListWatcher(() => [Window(1)], ticker, () => now)
+        {
+            PetIsResting = () => true,
+        };
+        watcher.Start();
+
+        now = WindowPollPolicy.DefaultThreshold + 1;
+        ticker.Fire();
+        Assert.Equal(WindowPollPolicy.RestingHz, ticker.Hz);
+
+        watcher.NoteForegroundChanged();
+        Assert.Equal(WindowPollPolicy.BurstHz, ticker.Hz);
     }
 
     [Fact]
