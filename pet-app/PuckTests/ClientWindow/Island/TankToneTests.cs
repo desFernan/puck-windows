@@ -50,7 +50,11 @@ public class TankToneTests
 
         var tone = TankToneReader.Tone(Grid(blue, blue));
 
-        Assert.Equal(blue, tone.Depth[1]);
+        // 자릿수를 두고 견준다 — 같은 값 예순 개를 평균 내도 마지막 자리는
+        // 어긋나고, 색으로 쓸 값에서 그 차이는 없는 것이다.
+        Assert.Equal(blue.Red, tone.Depth[1].Red, precision: 6);
+        Assert.Equal(blue.Green, tone.Depth[1].Green, precision: 6);
+        Assert.Equal(blue.Blue, tone.Depth[1].Blue, precision: 6);
     }
 
     [Fact]
