@@ -41,6 +41,9 @@ public static class Strings
         ["a11y.kind.tool"] = "진행",
         ["a11y.kind.error"] = "오류",
         ["a11y.kind.notice"] = "안내",
+        ["island.fold"] = "섬 접기",
+        ["island.unfold"] = "섬 펴기",
+        ["a11y.island"] = "펫의 섬",
     };
 
     /// 없는 키는 키 자체를 돌려준다 — 문자열 하나가 빠졌다고 UI가
@@ -83,4 +86,8 @@ public static class Strings
     public static string ChatUsingTool => Get("chat.usingTool");
     public static string ChatToolFailed => Get("chat.toolFailed");
     public static string ChatToolRefused => Get("chat.toolRefused");
+
+    public static string IslandFold => Get("island.fold");
+    public static string IslandUnfold => Get("island.unfold");
+    public static string A11yIsland => Get("a11y.island");
 }

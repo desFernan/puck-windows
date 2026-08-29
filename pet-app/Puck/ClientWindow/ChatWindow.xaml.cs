@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Input;
+using Puck.ClientWindow.Island;
 using Puck.Localization;
 
 namespace Puck.ClientWindow;
@@ -37,7 +38,24 @@ public partial class ChatWindow : Window
         AutomationProperties.SetName(Input, Strings.A11yInput);
         AutomationProperties.SetName(ApprovalPanel, Strings.A11yApproval);
 
+        UpdateFoldButton();
+
         Append(TranscriptKind.Notice, Strings.ChatPrompt);
+    }
+
+    /// 섬을 접었다 폈다. 접힌 것은 띠 하나이고, 그 색은 펼친 섬을 채우는
+    /// 그림에서 읽어 온다 — 1초 차이의 같은 곳이어야 하므로.
+    private void OnFoldClicked(object sender, RoutedEventArgs e)
+    {
+        Island.IsFolded = !Island.IsFolded;
+        UpdateFoldButton();
+    }
+
+    private void UpdateFoldButton()
+    {
+        FoldButton.Content = Island.IsFolded ? Strings.IslandUnfold : Strings.IslandFold;
+        AutomationProperties.SetName(FoldButton, (string)FoldButton.Content);
+        AutomationProperties.SetName(Island, Strings.A11yIsland);
     }
 
     /// 사람이 한 줄 적어 보냈다.
