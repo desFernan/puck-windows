@@ -148,7 +148,7 @@ public sealed class AnthropicAgentClient(Func<AgentConfiguration> configuration)
             {
                 blocks.Add(new AgentBlock.ToolUse(toolUse.ID, toolUse.Name, toolUse.Input));
             }
-            // 그 밖(서버 도구 결과 등)은 이 Phase에서 쓰지 않으므로 흘려보낸다.
+            // 그 밖(서버 도구 결과 등)은 아직 쓰지 않으므로 흘려보낸다.
         }
 
         return blocks;

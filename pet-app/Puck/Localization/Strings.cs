@@ -1,7 +1,6 @@
 namespace Puck.Localization;
 
 /// UI 문자열. 하드코딩된 사용자 노출 문자열은 없다 — 전부 여기를 거친다.
-/// Phase 1이 쓰는 것만 있고, 이후 Phase가 자기 몫을 더한다.
 public static class Strings
 {
     private static readonly Dictionary<string, string> Table = new(StringComparer.Ordinal)

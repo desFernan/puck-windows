@@ -128,8 +128,8 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         _sfx = new SfxPlayer { IsMuted = () => _settings.Muted || focus.IsQuiet() };
 
         // 오버레이는 대부분의 시간 클릭스루라 마우스 이벤트를 받지 못한다.
-        // Phase 1은 프레임마다 커서와 버튼을 물어봤는데(폴링), 그러면 프레임
-        // 사이에 일어난 클릭을 통째로 놓친다. 저수준 훅이 그 자리를 대신한다.
+        // 프레임마다 커서와 버튼을 물어보는 폴링으로는 프레임 사이에 일어난
+        // 클릭을 통째로 놓친다. 저수준 훅이 그 자리를 대신한다.
         _mouse = new ClickDetector(Application.Current.Dispatcher)
         {
             Clock = () => _stopwatch.Elapsed.TotalSeconds,
@@ -138,7 +138,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         _mouse.Moved += (p, t) => _gestures.OnMouseMove(p, t);
         _mouse.Released += OnMouseReleased;
 
-        // 에이전트. 도구는 Phase 2의 감각을 그대로 물고, 설정은 매 요청마다
+        // 에이전트. 도구는 창·UI 감지를 그대로 물고, 설정은 매 요청마다
         // 다시 읽는다 — .env에 키를 넣은 사람이 앱을 끄지 않아도 되게.
         var registry = ToolRegistry.CreateDefault(
             windows: () => _windows?.Windows ?? [],
@@ -268,8 +268,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         RequestTransition = _ => { },   // CharacterController가 자기 것으로 갈아 끼운다
     };
 
-    /// 전역 핫키. 지금은 "펫 부르기"만 물린다 — 음성(PTT)과 입력 버블은
-    /// 각각 Phase 6과 이 Phase의 뒤쪽 태스크가 채운다.
+    /// 전역 핫키. 지금은 "펫 부르기"만 물린다 — 음성(PTT)은 아직 없다.
     /// 펫 옆에 입력 버블을 띄운다. 받은 문장은 채팅 창으로 보낸 것과 같은
     /// 곳으로 간다.
     private void ShowInputBubble()
@@ -467,9 +466,8 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         return focused is null ? null : new HashSet<IntPtr> { focused.Handle };
     }
 
-    /// 곧장 아래로 떨어지면 무엇에 닿는가. Phase 1에서는 언제나 화면 바닥이었고,
-    /// 이제 창 윗면이 그 사이에 끼어든다 — StateContext.LandingY가 클로저인 덕분에
-    /// 상태 코드는 한 줄도 바뀌지 않는다.
+    /// 곧장 아래로 떨어지면 무엇에 닿는가. 화면 바닥과 창 윗면이 후보다 —
+    /// StateContext.LandingY가 클로저라 상태 코드는 이를 몰라도 된다.
     private double LandingY(Point point)
     {
         var floor = _screens!.FloorY(point);

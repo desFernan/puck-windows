@@ -4,7 +4,7 @@ using Puck.WindowSensing;
 
 namespace Puck.Tools.Handlers;
 
-/// 창 안에서 버튼 같은 것을 찾는다. Phase 2의 UIA 검색을 그대로 쓴다.
+/// 창 안에서 버튼 같은 것을 찾는다. 창 감지 쪽의 UIA 검색을 그대로 쓴다.
 public sealed class FindUIElementHandler(Func<IReadOnlyList<WindowInfo>> windows) : IToolHandler
 {
     public string Name => "find_ui_element";

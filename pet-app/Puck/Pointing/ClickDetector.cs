@@ -10,8 +10,8 @@ namespace Puck.Pointing;
 /// `SetWindowsHookEx(WH_MOUSE_LL)`가 대신한다.
 ///
 /// 이걸 쓰는 이유는 오버레이가 대부분의 시간 `WS_EX_TRANSPARENT`라 마우스
-/// 이벤트를 아예 못 받기 때문이다. Phase 1은 프레임마다 커서와 버튼 상태를
-/// 물어봤는데(폴링), 그러면 프레임 사이에 일어난 클릭을 통째로 놓친다.
+/// 이벤트를 아예 못 받기 때문이다. 프레임마다 커서와 버튼 상태를 물어보는
+/// 폴링으로는 프레임 사이에 일어난 클릭을 통째로 놓친다.
 public sealed class ClickDetector : IDisposable
 {
     private readonly Win32.HookProc _callback;

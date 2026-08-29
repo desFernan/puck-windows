@@ -3,7 +3,7 @@ using Puck.Tools;
 
 namespace Puck.Agent;
 
-/// 한 턴 동안 무슨 일이 있었는지. 펫 연출과 (Phase 4의) 채팅 UI가 여기 붙는다.
+/// 한 턴 동안 무슨 일이 있었는지. 펫 연출과 채팅 UI가 여기 붙는다.
 public abstract record AgentEvent
 {
     public sealed record Said(string Text) : AgentEvent;

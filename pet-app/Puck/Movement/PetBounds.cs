@@ -62,7 +62,7 @@ public static class PetBounds
     }
 
     /// 위로 가는 움직임만 다룬다: 내려오는 건 착지이고, 어느 면에
-    /// 내려앉는지는 Phase 2(창 윗면, 화면 바닥)의 일이다.
+    /// 내려앉는지는 착지면 판정(창 윗면, 화면 바닥)의 일이다.
     public static Bounce BounceOffCeiling(Point position, double velocity, Rect visualBounds, Rect area)
     {
         // Y는 아래로 증가하므로 위쪽 속도는 음수이고, 펫의 머리는

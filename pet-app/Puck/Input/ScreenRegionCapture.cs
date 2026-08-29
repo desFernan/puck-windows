@@ -6,10 +6,10 @@ using Puck.Interop;
 
 namespace Puck.Input;
 
-/// 화면의 한 조각을 찍는다. 에이전트(Phase 3)가 그대로 첨부할 PNG로 돌려준다.
+/// 화면의 한 조각을 찍는다. 에이전트가 그대로 첨부할 PNG로 돌려준다.
 ///
 /// mac의 `CGWindowListCreateImage` 자리. `Windows.Graphics.Capture`는 WinRT
-/// 상호운용이 필요해서 Phase 6에서 다시 본다 — BitBlt로도 필요한 것은 다 된다.
+/// 상호운용이 필요해서 미뤄 뒀다 — BitBlt로도 필요한 것은 다 된다.
 public static class ScreenRegionCapture
 {
     /// 가상 화면 물리 픽셀 사각형을 찍는다. 화면 밖으로 나간 부분은 잘라 낸다.
@@ -34,7 +34,6 @@ public static class ScreenRegionCapture
 
             // CAPTUREBLT가 없으면 레이어드 창이 통째로 빠진다 — 펫 자신이
             // 레이어드 창이라, 그게 없으면 "펫이 있는 화면"을 찍을 수가 없다.
-            // (Phase 1 검증에서 실제로 겪었다.)
             var ok = Win32.BitBlt(memoryDc, 0, 0, region.Width, region.Height,
                                   screenDc, region.X, region.Y,
                                   Win32.SRCCOPY | Win32.CAPTUREBLT);

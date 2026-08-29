@@ -24,8 +24,8 @@ public sealed record StateContext
     public required double WalkSpeed { get; init; }
 
     /// 그 지점에서 곧장 떨어지면 닿는 표면의 Y. 상태가 창 목록에
-    /// 의존하지 않도록 클로저로 주입한다 — Phase 2에서 창 윗면이
-    /// 여기 끼어들 때 상태 코드는 한 줄도 바뀌지 않는다.
+    /// 의존하지 않도록 클로저로 주입한다 — 창 윗면이 여기 끼어들어도
+    /// 상태 코드는 한 줄도 바뀌지 않는다.
     public required Func<Point, double> LandingY { get; init; }
 
     /// 그 지점 아래에 실제 디스플레이가 있는가. RoamableArea는 경계 상자라

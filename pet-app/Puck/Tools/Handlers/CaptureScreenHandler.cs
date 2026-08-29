@@ -8,7 +8,7 @@ namespace Puck.Tools.Handlers;
 
 /// 화면 한 조각을 찍어 파일로 남긴다.
 ///
-/// 그림 자체를 대화에 넣는 것은 Phase 4(채팅 창)가 붙을 때 할 일이다. 지금은
+/// 그림 자체를 대화에 넣는 것은 아직 하지 않는다. 지금은
 /// 어디에 저장했는지를 돌려준다 — 모델이 "봤다"고 꾸며 내는 것보다, 사람이
 /// 열어 볼 수 있는 파일 하나가 정직하다.
 public sealed class CaptureScreenHandler(Func<Rect> virtualScreen) : IToolHandler

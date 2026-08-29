@@ -13,7 +13,7 @@ Bugs, feature requests, build help, or just want to hang out — the
 [support server](https://discord.gg/ePBZVnwSYE) is the fastest way to reach
 us. Come say hi!
 
-**Current status: Phase 0–4 done — the pet walks the screen, and you can talk to it.**
+**Current status: the pet walks the screen, and you can talk to it.**
 A transparent, always-on-top, click-through overlay shows the avatar; physics
 and the state machine are running; click, drag and throw work; it lands on
 the taskbar. It reads avatar folders made on macOS as-is. It senses windows
@@ -22,7 +22,8 @@ nine tools — window listing, UI element search, pointing, clicking, screen
 capture, app launch and PowerShell. Tools that change things ask before they
 run. The pet climbs a wall or the screen's own edge all the way to the ceiling
 and crawls it upside down. The tray's "Settings…" holds the avatar, movement
-speed, the theme and launch-at-login. The code editor and terminal panel are Phase 5–6.
+speed, the theme and launch-at-login. The code editor and terminal panel are
+not ported yet.
 
 ## Build
 
@@ -60,7 +61,7 @@ unrecognised falls back to `tools`, the narrowest.
 
 Environment variables win over the file, and the file is re-read per request —
 adding a key does not need a restart. macOS's `run_applescript` is
-`run_powershell` here; the ACP-backed code editor is still Phase 5.
+`run_powershell` here; the ACP-backed code editor is not ported yet.
 
 ## Making it your own
 

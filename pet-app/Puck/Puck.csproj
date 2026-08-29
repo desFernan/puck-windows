@@ -29,7 +29,7 @@
   </ItemGroup>
 
   <!--
-    효과음. porting-design.md 3장의 결정이고, Phase 2가 받는 유일한 NuGet이다.
+    효과음. 이 프로젝트가 받는 유일한 NuGet이다.
     BCL의 System.Media.SoundPlayer로는 겹쳐 재생·볼륨·비동기가 안 되는데
     mac의 SFXPlayer는 그 셋을 다 한다(플레이어 노드 풀).
   -->

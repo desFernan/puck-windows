@@ -1,7 +1,7 @@
 namespace Puck.Movement;
 
-/// FSM 상태 식별자. Phase 2 이후(Point, Type, Listen, Spin, Petting,
-/// Pinned, Travel, 공놀이 셋)가 여기에 더한다.
+/// FSM 상태 식별자. 아직 포팅되지 않은 상태(Point, Type, Listen, Spin,
+/// Petting, Pinned, Travel, 공놀이 셋)가 여기에 더해진다.
 public enum StateKind
 {
     Idle,

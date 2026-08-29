@@ -91,8 +91,8 @@ public sealed record ScreenSpace
         return new Point(standing.X, area.Bottom);
     }
 
-    /// 그 지점에서 곧장 떨어지면 닿는 바닥. Phase 2에서 창 윗면이
-    /// 착지면으로 끼어들기 전까지는 언제나 화면 바닥이다.
+    /// 그 지점에서 곧장 떨어지면 닿는 바닥. 창 윗면을 보지 않는,
+    /// 화면 바닥만의 답이다.
     public double FloorY(Point point)
     {
         var index = IndexOfScreenContaining(point);

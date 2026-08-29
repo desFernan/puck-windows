@@ -4,7 +4,7 @@ using Puck.Tools;
 namespace Puck.Agent;
 
 /// 사람에게 물어야 하는 도구를 어떻게 물을 것인가.
-/// 채팅 UI는 Phase 4라, 지금은 답하는 쪽을 갈아 끼울 수 있게 인터페이스로 둔다.
+/// 답하는 쪽을 갈아 끼울 수 있게 인터페이스로 둔다.
 public interface IApprovalPrompt
 {
     /// 이 도구를 이 인자로 실행해도 되는가.
