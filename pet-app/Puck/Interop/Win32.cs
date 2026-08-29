@@ -38,7 +38,19 @@ internal static partial class Win32
     [StructLayout(LayoutKind.Sequential)]
     public struct POINT { public int X; public int Y; }
 
+        /// 디스플레이 하나의 DPI. 좌표계가 물리 픽셀이라, 논리 단위로 적힌
+    /// 상수(노치의 폭과 깊이 같은 것)를 그 화면에 맞게 환산해야 한다.
+    /// 창에 물어보는 GetDpiForWindow와 달리 아직 창이 없는 것에도 쓸 수 있다.
+    public const int MDT_EFFECTIVE_DPI = 0;
+    public const uint MONITOR_DEFAULTTONEAREST = 2;
+
     [LibraryImport("user32.dll")]
+    public static partial IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
+
+    [LibraryImport("shcore.dll")]
+    public static partial int GetDpiForMonitor(IntPtr hmonitor, int dpiType, out uint dpiX, out uint dpiY);
+
+[LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool GetCursorPos(out POINT lpPoint);
 

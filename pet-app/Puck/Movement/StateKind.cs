@@ -1,7 +1,7 @@
 namespace Puck.Movement;
 
-/// FSM 상태 식별자. Phase 2 이후(Climb, Ceiling, Point, Type, Listen,
-/// Spin, Petting, Pinned, MoveTo, Travel, WalkOnTop, 공놀이 셋)가 여기에 더한다.
+/// FSM 상태 식별자. Phase 2 이후(Point, Type, Listen, Spin, Petting,
+/// Pinned, Travel, 공놀이 셋)가 여기에 더한다.
 public enum StateKind
 {
     Idle,
@@ -12,6 +12,10 @@ public enum StateKind
     ClimbLedge,
     /// 창 옆면을 타고 그 윗변까지.
     Climb,
+    /// 벽을 타고 천장까지 곧장. 창 윗변에서 멈추는 Climb과 달리 끝까지 간다.
+    ClimbToCeiling,
+    /// 천장에 거꾸로 매달려 긴다.
+    Ceiling,
     /// 창 윗변 위를 거닌다.
     WalkOnTop,
     /// 남이 정해 준 곳으로 간다 — 핫키로 부르면 오는 것이 이것이다.

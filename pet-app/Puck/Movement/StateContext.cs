@@ -41,6 +41,42 @@ public sealed record StateContext
     /// 없으면 null. 낮은 화면에서 높은 화면으로 돌아가는 유일한 걸음이다.
     public required Func<Point, double, Rect, Point?> LedgeBeyond { get; init; }
 
+    /// 그 지점이 있는 **디스플레이 하나**의 작업 영역.
+    ///
+    /// RoamableArea(전부의 경계 상자)와 다르다. 더 큰 모니터가 옆에 붙어
+    /// 있으면 그 상자의 윗변은 이 화면 밖 어딘가라, 그것을 겨눈 기어가기는
+    /// 펫을 지금 있는 화면 위로 내보낸다. 머리 위에 노치가 있는지도 이것이
+    /// 정한다.
+    ///
+    /// 기본은 RoamableArea 자신이다 — 디스플레이가 하나인 세계에서는 그
+    /// 둘이 같은 것이고, 화면 구성을 꾸미지 않은 테스트가 뜻하는 바가 정확히
+    /// 그것이다.
+    public Func<Point, Rect> AreaAt
+    {
+        get => _areaAt ?? (_ => RoamableArea);
+        init => _areaAt = value;
+    }
+    private readonly Func<Point, Rect>? _areaAt;
+
+    /// 그 영역 위에 걸린 노치. 없으면 null — 기본도 그것이다. 노치는 켜야
+    /// 생기는 것이라, 그것을 꾸미지 않은 테스트의 세계에는 노치가 없다.
+    public Func<Rect, ScreenNotch?> NotchOver
+    {
+        get => _notchOver ?? (_ => null);
+        init => _notchOver = value;
+    }
+    private readonly Func<Rect, ScreenNotch?>? _notchOver;
+
+    /// 그 영역의 `x`에서 천장. 노치 아래에서는 노치의 아랫변이다.
+    ///
+    /// 기본은 영역의 윗변, 즉 노치가 없을 때의 답이다.
+    public Func<double, Rect, double> CeilingAt
+    {
+        get => _ceilingAt ?? ((_, area) => area.Top);
+        init => _ceilingAt = value;
+    }
+    private readonly Func<double, Rect, double>? _ceilingAt;
+
     /// 지금 화면에 있는 창들, 앞에서 뒤 순서. 착지면·벽·발판이 전부 여기서 나온다.
     public required IReadOnlyList<WindowInfo> Windows { get; init; }
 

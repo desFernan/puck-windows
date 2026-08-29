@@ -10,6 +10,7 @@ using Puck.Input;
 using Puck.Localization;
 using Puck.Movement;
 using Puck.Movement.States;
+using Puck.NowPlaying;
 using Puck.Overlay;
 using Puck.Pointing;
 using Puck.Tools;
@@ -36,9 +37,21 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     /// 펫과 글로 말하는 창. 트레이에서 열거나, 승인을 물어야 할 때 저절로 뜬다.
     private ChatWindow? _chat;
 
+    /// 한 번 정해 두고 잊는 설정들의 창. 트레이에서만 연다.
+    private SettingsWindow? _settingsWindow;
+
+    /// 화면 위 한가운데의 노치. 설정으로 켰을 때만 있다.
+    private NotchWindow? _notch;
+
+    /// 지난 프레임에 노치가 걸려 있던 자리. 화면 구성이 바뀌면 따라간다.
+    private Rect? _lastNotch;
+
     /// 지난 프레임에 펫이 걷던 세계의 크기. 이것이 바뀌면 딛고 있던 바닥이
     /// 사라졌을 수 있다.
     private Rect? _lastRoamableArea;
+
+    /// 천장을 목적지로 뽑힌 배회가 벽까지 걸어가는 중이다. 도착하면 오른다.
+    private bool _pendingCeilingClimb;
     private ReactDragState? _drag;
     private TrayIcon? _tray;
     private WindowListWatcher? _windows;
@@ -68,11 +81,19 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             onToggleVisible: ToggleVisible,
             onOpenCustomisationFolder: OpenCustomisationFolder,
             onReloadAvatar: ReloadAvatar,
+            onOpenSettings: () => Settings().ShowAndActivate(),
+            initiallyMuted: _settings.Muted,
+            onMutedChanged: muted =>
+            {
+                _settings.Muted = muted;
+                _settings.Save();
+            },
             // 채팅 창을 먼저 닫는다. Shutdown이 닫는 순서에 기대면, 닫기를
             // 막는 창(우리는 X를 숨기기로 바꿔 뒀다)이 종료를 붙잡을 수 있다.
             onQuit: () =>
             {
                 _chat?.CloseForGood();
+                _settingsWindow?.CloseForGood();
                 Application.Current.Shutdown();
             });
 
@@ -91,10 +112,11 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         ReloadAvatar();
 
-        _gestures.Clicked += () => _controller?.Request(StateKind.ReactClick);
+        _gestures.Clicked += () => { CancelWander(); _controller?.Request(StateKind.ReactClick); };
         _gestures.Dragged += position =>
         {
             if (_drag is null) return;
+            CancelWander();
             _drag.DragPosition = position;
             _controller?.Request(StateKind.ReactDrag);
         };
@@ -106,7 +128,10 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         };
 
         var focus = new FocusAssistObserver();
-        _sfx = new SfxPlayer { IsMuted = focus.IsQuiet };
+        // 둘 중 하나라도 참이면 조용하다. 사람이 끈 것과 집중 지원이 끈 것을
+        // 따로 두는 이유는, 집중 지원이 풀렸다고 사람이 끈 소리가 돌아오면
+        // 안 되기 때문이다.
+        _sfx = new SfxPlayer { IsMuted = () => _settings.Muted || focus.IsQuiet() };
 
         // 오버레이는 대부분의 시간 클릭스루라 마우스 이벤트를 받지 못한다.
         // Phase 1은 프레임마다 커서와 버튼을 물어봤는데(폴링), 그러면 프레임
@@ -178,7 +203,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             return;
         }
 
-        if (_screens is null) Volatile.Write(ref _screens, ScreenSpace.Current());
+        if (_screens is null) Volatile.Write(ref _screens, ScreenSpace.Current(_settings.NotchEnabled));
         if (_screens is null) return;
 
         var start = _body?.Position ?? StartPosition(_screens);
@@ -200,6 +225,8 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             [StateKind.Land] = new LandState(),
             [StateKind.ClimbLedge] = ledge,
             [StateKind.Climb] = new ClimbState(),
+            [StateKind.ClimbToCeiling] = new ClimbToCeilingState(),
+            [StateKind.Ceiling] = new CeilingState(),
             [StateKind.MoveTo] = _moveTo,
             [StateKind.WalkOnTop] = new WalkOnTopState(),
             [StateKind.ReactClick] = new ReactClickState(),
@@ -241,6 +268,9 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         HasGroundUnder = _screens.HasGroundUnder,
         SnapToGround = _screens.NearestStandablePoint,
         LedgeBeyond = _screens.LedgeBeyond,
+        AreaAt = _screens.WorkingAreaContaining,
+        NotchOver = _screens.NotchOver,
+        CeilingAt = _screens.CeilingY,
         Windows = _windows?.Windows ?? [],
         UnclimbableWindows = UnclimbableWindows(),
         RequestTransition = _ => { },   // CharacterController가 자기 것으로 갈아 끼운다
@@ -296,6 +326,16 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
     /// 채팅 창. 처음 필요할 때 만든다 — 한 번도 말을 안 거는 사람에게
     /// 창 하나를 미리 지어 둘 이유가 없다.
+    /// 설정 창. 닫아도 버리지 않는다 — 여기에는 창이 닫힌 동안 낡아 갈
+    /// 살아 있는 상태가 없다.
+    private SettingsWindow Settings()
+    {
+        if (_settingsWindow is not null) return _settingsWindow;
+
+        _settingsWindow = new SettingsWindow(_settings, ReloadAvatar);
+        return _settingsWindow;
+    }
+
     private ChatWindow Chat()
     {
         if (_chat is not null) return _chat;
@@ -313,6 +353,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         Application.Current.Dispatcher.Invoke(() =>
         {
+            CancelWander();
             _pending.Point(target, _stopwatch.Elapsed.TotalSeconds);
             _moveTo.Target = new Point(target.X, LandingY(target));
             _controller.Request(StateKind.MoveTo);
@@ -344,6 +385,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             avatarHeight: _avatar.Size.Height,
             petHalfWidth: _avatar.Size.Width / 2);
 
+        CancelWander();
         _moveTo.Target = perch ?? new Point(cursor.X, LandingY(cursor));
         _controller.Request(StateKind.MoveTo);
     }
@@ -365,6 +407,33 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
                 // 오를 것이 없으면 그냥 걷는다 — 오류가 아니라 흔한 경우다.
                 _walk.TargetX = climbTarget?.X;
+                _controller.Request(StateKind.Walk);
+                break;
+
+            case WanderOutcome.CrawlCeiling when _windows is not null && _avatar is not null:
+                // 발밑에 벽이 있으면 바로 오른다. 없으면 벽까지 먼저 걸어간다 —
+                // ClimbNearestWindow가 이미 하는 그 걸음이되, 목적지가 천장이었다는
+                // 것을 기억한 채로.
+                //
+                // 여기서 포기하고 배회로 돌아가면 이 선택지는 사실상 닿을 수 없다.
+                // 펫은 바닥이나 창 위에서 가만히 있다가 뽑히는데, 가만히 있는 동안
+                // 벽에 붙어 있는 것은 우연이기 때문이다. mac에서 실측한 결과가
+                // 3분에 두 번 뽑혀 두 번 다 오를 것이 없었다.
+                var ceilingArea = _screens!.WorkingAreaContaining(_body.Position);
+                if (WindowSupport.HasWall(_body.Position, _body.VisualBounds,
+                                          _windows.Windows, ceilingArea, UnclimbableWindows()))
+                {
+                    _controller.Request(StateKind.ClimbToCeiling);
+                    break;
+                }
+
+                _pendingCeilingClimb = true;
+                _walk.TargetX = (WindowSupport.NearestClimbTarget(
+                    _body.Position, _windows.Windows,
+                    roamableTop: ceilingArea.Top,
+                    avatarHeight: _avatar.Size.Height,
+                    excluding: UnclimbableWindows())
+                    ?? WindowSupport.NearestScreenEdge(_body.Position, _body.VisualBounds, ceilingArea)).X;
                 _controller.Request(StateKind.Walk);
                 break;
 
@@ -427,10 +496,12 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         // 디스플레이 구성이 바뀌었을 수 있다. 목록이 비면(전부 잠듦)
         // 마지막으로 알던 것을 그대로 쓴다.
-        Volatile.Write(ref _screens, ScreenSpace.Current() ?? _screens);
+        Volatile.Write(ref _screens, ScreenSpace.Current(_settings.NotchEnabled) ?? _screens);
         PutDownAfterDisplayChange();
 
         _pending.Expire(_stopwatch.Elapsed.TotalSeconds);
+        PlaceNotch();
+        ClimbToCeilingWhenAtAWall();
         _controller.Advance(dt);
         _presenter?.Advance(dt, _body, _controller);
         _body.UpdateBounce(_avatar.CurrentClipKey, _stopwatch.Elapsed);
@@ -441,6 +512,72 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         _window.MoveTo(_body.Position, _body.VisualBounds);
         _window.UpdateClickThrough(_avatar);
+    }
+
+    /// 노치 창을 지금의 화면 구성과 설정에 맞춘다.
+    ///
+    /// 매 프레임 불리지만 대부분 아무것도 하지 않는다 — 노치는 하드웨어가
+    /// 바뀔 때 바뀌는 것이라, `_screens`가 다시 재어졌을 때만 실제로 움직인다.
+    ///
+    /// 어느 노치를 쓰는가: 커서가 있는 화면이 아니라 **주 디스플레이**의
+    /// 것이다. 노치가 mac에서 화면마다 하나씩 있는 것과 달리 여기서는 그리는
+    /// 물건이고, 모니터마다 하나씩 띄우면 화면 셋에 검은 막대 셋이 생긴다.
+    private void PlaceNotch()
+    {
+        if (_screens is null) return;
+
+        // 설정으로 껐으면 ScreenSpace에도 노치가 없다 — 펫의 세계와 그리는
+        // 것이 같은 한 곳에서 갈린다.
+        var notch = _screens.Notches.FirstOrDefault(n => n is not null);
+        if (notch is not { } placed)
+        {
+            if (_notch is null) return;
+            _notch.Retire();
+            _lastNotch = null;
+            return;
+        }
+
+        if (_lastNotch == placed.Rect && _notch is not null) return;
+        _lastNotch = placed.Rect;
+
+        _notch ??= new NotchWindow(new NowPlayingStore(new SystemNowPlayingReader()));
+        _notch.PlaceOn(placed.Rect);
+    }
+
+    /// 배회가 하려던 것을 놓는다.
+    ///
+    /// 천장으로 가려던 걸음은 그 배회의 일부라, 펫을 가로채는 것은 그
+    /// 예약도 같이 떨어뜨려야 한다. 안 그러면 펫이 다른 이유로 어딘가에
+    /// 보내졌다가 도착해서 아무도 시키지 않은 벽을 오른다.
+    private void CancelWander() => _pendingCeilingClimb = false;
+
+    /// 천장을 노린 배회의 걸음이 벽에 닿았으면 거기서부터 끝까지 오르게 한다.
+    ///
+    /// 매 프레임 불리고 나머지 시간에는 아무것도 하지 않는다 — 도착을
+    /// 알려 주는 것이 없어서 그 순간을 이쪽에서 알아채야 한다.
+    ///
+    /// 두 순간을 잡는다. 벽이 두 종류이기 때문이다. **창의** 옆면으로
+    /// 걸어 들어가는 것은 WalkState가 가로채 닿는 프레임에 Climb으로
+    /// 넘기므로, 거기서 펫이 가만히 서 있는 순간은 없다. **화면의**
+    /// 가장자리로 걸어가는 것은 아무것도 막지 않아서 그냥 도착해 선다.
+    private void ClimbToCeilingWhenAtAWall()
+    {
+        if (!_pendingCeilingClimb || _controller is null || _body is null || _windows is null) return;
+
+        var arrived = _controller.Current == StateKind.Idle;
+        var alreadyClimbing = _controller.Current == StateKind.Climb;
+        if (!arrived && !alreadyClimbing) return;
+        _pendingCeilingClimb = false;
+
+        // 뽑을 때의 판단을 믿지 않고 여기서 다시 묻는다. 걸어가는 데 시간이
+        // 걸리고, 그동안 겨눴던 창은 닫히거나 옮겨질 수 있다. 잡을 것이
+        // 없으면 펫은 걸어온 자리에 그대로 선다 — 어차피 했을 일이다.
+        var area = _screens!.WorkingAreaContaining(_body.Position);
+        if (!WindowSupport.HasWall(_body.Position, _body.VisualBounds,
+                                   _windows.Windows, area, UnclimbableWindows()))
+            return;
+
+        _controller.Request(StateKind.ClimbToCeiling);
     }
 
     /// 세계가 다시 재어졌으면 서 있던 펫을 새 바닥에 내려놓는다.

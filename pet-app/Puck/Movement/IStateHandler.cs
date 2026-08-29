@@ -10,6 +10,15 @@ namespace Puck.Movement;
 /// 다른 곳에서 도는 상태는 WPF가 그리고 있는 캐릭터를 움직이게 된다.
 public interface IStateHandler
 {
+    /// 이 상태를 나갈 때까지 거꾸로 뒤집힌 채로 두는가.
+    ///
+    /// 기본은 false — 상태에 들어설 때마다 컨트롤러가 바로 세운다. 거꾸로
+    /// 매달리는 상태는 Ceiling 하나뿐인데, 어떤 상태든 다른 어떤 상태를
+    /// 가로챌 수 있으므로(클릭, 드래그, 에이전트 명령) 들어설 때 한 곳에서
+    /// 되돌리는 것만이 Ceiling에서 **곧장** 넘어간 상태까지 바로 선다고
+    /// 보장하는 유일한 방법이다.
+    bool PreservesUpsideDown => false;
+
     /// 표시/디버깅용 이름 ("Idle", "Walk").
     string Name { get; }
 

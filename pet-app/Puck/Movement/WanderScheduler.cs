@@ -7,6 +7,8 @@ public enum WanderOutcome
     WalkToRandomPoint,
     /// 가장 가까운 창으로 가서 타고 오른다.
     ClimbNearestWindow,
+    /// 벽을 타고 천장까지 올라가 거꾸로 매달려 긴다.
+    CrawlCeiling,
     /// 이번엔 그냥 있는다.
     Stay,
 }
@@ -49,13 +51,14 @@ public sealed class WanderScheduler(Random random)
     }
 
     /// mac의 가중치는 35% 걷기 / 25% 창 오르기 / 15% 천장 / 10% 장난감 / 15% 가만히다.
-    /// 천장과 장난감은 아직 없으므로 그 몫을 걷기에 합친다 — 원본 주석도
-    /// "없는 선택지는 어차피 걷기로 떨어진다"고 적어 두었다.
+    /// 장난감은 아직 없으므로 그 몫을 걷기에 합친다 — 원본 주석도 "없는
+    /// 선택지는 어차피 걷기로 떨어진다"고 적어 두었다.
     private WanderOutcome Draw()
     {
         var roll = random.NextDouble();
-        if (roll < 0.60) return WanderOutcome.WalkToRandomPoint;
-        if (roll < 0.85) return WanderOutcome.ClimbNearestWindow;
+        if (roll < 0.45) return WanderOutcome.WalkToRandomPoint;
+        if (roll < 0.70) return WanderOutcome.ClimbNearestWindow;
+        if (roll < 0.85) return WanderOutcome.CrawlCeiling;
         return WanderOutcome.Stay;
     }
 }

@@ -26,8 +26,7 @@ public sealed class CharacterController
         _contextFactory = contextFactory;
         Current = initial;
 
-        Handler.Enter();
-        PlayClipFor(Handler);
+        EnterState(Handler);
     }
 
     public StateKind Current { get; private set; }
@@ -78,9 +77,21 @@ public sealed class CharacterController
         var previous = Current;
         Handler.Exit();
         Current = next;
+        EnterState(handler);
+        Transitioned?.Invoke(previous, next);
+    }
+
+    /// 상태에 들어선다. 클립을 걸기 **전에** 자세를 바로 세운다 — 거꾸로
+    /// 매달린 채로 그 상태의 그림을 한 프레임 그리면 눈에 띈다.
+    ///
+    /// 되돌리기가 Ceiling의 Exit이 아니라 여기 있는 이유는, 어떤 상태든
+    /// 다른 어떤 상태를 가로챌 수 있기 때문이다. 들어서는 쪽에서 한 번에
+    /// 처리해야 Ceiling에서 곧장 넘어간 상태까지 빠짐없이 바로 선다.
+    private void EnterState(IStateHandler handler)
+    {
+        if (!handler.PreservesUpsideDown) _body.IsUpsideDown = false;
         handler.Enter();
         PlayClipFor(handler);
-        Transitioned?.Invoke(previous, next);
     }
 
     /// 지금 상태의 클립을 다시 건다. 표정 같은 것이 잠깐 다른 그림을 덮었다가

@@ -69,6 +69,46 @@ public static class WindowSupport
         return null;
     }
 
+    /// 펫이 화면 자신의 옆면에 붙어 있는가.
+    ///
+    /// 벽은 벽이다. 오르기는 여태 붙잡을 **창**을 요구했는데, 최대화된 창
+    /// 하나만 떠 있는 바탕화면에서는 그것이 곧 오를 것이 아무것도 없다는
+    /// 뜻이었다 — `NearestClimbTarget`은 머리 여유가 없는 창을 제외하고,
+    /// 최대화된 창이 정확히 그것이다. 그래서 천장과 그 위의 기어가기는
+    /// 배회가 뽑아 놓고 매번 버리는 선택지였다.
+    ///
+    /// 화면의 옆면은 언제나 거기 있고, 펫이 붙어 있는 동안 닫히거나 옮겨질
+    /// 수 없는 유일한 벽이다.
+    ///
+    /// 발밑 한 점이 아니라 펫의 **외곽선**에 묻는다. 가두기가 그림 전체를
+    /// 화면 안에 두므로 접지점은 가장자리에서 반 폭 못 미쳐 멈추고 영영
+    /// 닿지 않는다 — 맨 위치로 재는 검사는 참이 될 수 없는 검사다.
+    public static bool IsAgainstScreenEdge(Point position, Rect visualBounds, Rect area)
+        => Math.Abs((position.X + visualBounds.Left) - area.Left) <= EdgeTolerance
+        || Math.Abs((position.X + visualBounds.Right) - area.Right) <= EdgeTolerance;
+
+    /// 오를 곳이 있는가 — 두 종류 중 어느 쪽이든.
+    public static bool HasWall(Point position, Rect visualBounds, IReadOnlyList<WindowInfo> windows,
+                               Rect area, ISet<IntPtr>? excluding = null)
+        => WindowBeingClimbed(position, windows, excluding) is not null
+        || IsAgainstScreenEdge(position, visualBounds, area);
+
+    /// 더 가까운 쪽 화면 옆면에서, 펫의 높이 그대로.
+    ///
+    /// 최후의 벽이다. 언제나 있고, 가는 동안 밑에서 닫히거나 치워질 수 없다.
+    /// 돌려주는 것은 펫의 **외곽선이** 그 가장자리에 닿는 발 자리 — 가두기가
+    /// 놓을 자리와 같은 곳이라, 걸음이 자기 목표 앞에서 영영 잘리지 않고
+    /// 실제로 도착한다.
+    public static Point NearestScreenEdge(Point position, Rect visualBounds, Rect area)
+    {
+        var toLeft = position.X - area.Left;
+        var toRight = area.Right - position.X;
+        var x = toLeft <= toRight
+            ? area.Left - visualBounds.Left
+            : area.Right - visualBounds.Right;
+        return new Point(x, position.Y);
+    }
+
     /// 사람이 실제로 쓰고 있는 창 — 맨 앞 앱의 맨 앞 창. 목록이 앞에서 뒤
     /// 순서이므로 첫 일치가 맨 위다.
     ///
