@@ -19,8 +19,8 @@ public sealed class SpriteAvatar : IAvatarPlayable
     {
         _load = load;
         PackageDirectory = packageDirectory;
-        Size = new Size(load.Manifest.Hitbox.Width * load.Manifest.Scale,
-                        load.Manifest.Hitbox.Height * load.Manifest.Scale);
+        DesktopSize = new Size(load.Manifest.Hitbox.Width * load.Manifest.Scale,
+                               load.Manifest.Hitbox.Height * load.Manifest.Scale);
     }
 
     /// 그려지는 크기의 몇 배로 디코딩할지. 1배로 딱 맞추면 스쿼시&스트레치로
@@ -37,10 +37,28 @@ public sealed class SpriteAvatar : IAvatarPlayable
     /// 디코딩할 가로 픽셀 수. 원본이 이보다 작으면 WIC이 늘려서 디코딩하는데,
     /// 그 경우 메모리 몇백 KB를 더 쓸 뿐이라 원본 크기를 미리 읽어 보는
     /// (파일을 한 번 더 여는) 비용을 치를 값어치가 없다.
-    private int DecodeWidth => Math.Max(1, (int)Math.Ceiling(Size.Width * Supersample));
+    /// 바탕화면 크기를 기준으로 디코딩한다 — 수조에서 작아진 크기로 재면,
+    /// 그 그림이 캐시에 남은 채로 펫이 다시 커졌을 때 흐려진다.
+    private int DecodeWidth => Math.Max(1, (int)Math.Ceiling(DesktopSize.Width * Supersample));
 
-    /// manifest hitbox × scale — 그려지고 클릭되는 크기, 포인트 단위.
-    public Size Size { get; }
+    /// manifest hitbox × scale — 바탕화면에서의 크기.
+    public Size DesktopSize { get; }
+
+    /// 지금 크기를 바탕화면 크기의 몇 배로 그릴 것인가.
+    ///
+    /// 섬은 90점짜리 상자라 바탕화면의 펫이 그대로 들어가지 않는다. 매니페스트를
+    /// 다시 읽는 대신 여기서 줄인다 — 그림은 이미 그려지는 크기의 두 배로
+    /// 디코딩해 두므로(`Supersample`), 작아지는 쪽으로는 다시 읽을 것이 없다.
+    public double RuntimeScale
+    {
+        get => _runtimeScale;
+        set => _runtimeScale = value > 0 ? value : 1;
+    }
+
+    private double _runtimeScale = 1;
+
+    /// 실제로 그려지고 클릭되는 크기.
+    public Size Size => new(DesktopSize.Width * RuntimeScale, DesktopSize.Height * RuntimeScale);
 
     public Point Position { get; private set; }
     public AvatarFacing Facing { get; private set; } = AvatarFacing.Right;

@@ -79,6 +79,7 @@ public class HoldingOnTests
     [InlineData(StateKind.Ceiling)]
     [InlineData(StateKind.ReactDrag)]
     [InlineData(StateKind.Fall)]
+    [InlineData(StateKind.Travel)]
     public void 붙잡고_있으면_내려놓지_않는다(StateKind state)
     {
         Assert.False(DisplayChangeRelocation.StandsOnGround(state));
@@ -105,7 +106,7 @@ public class HoldingOnTests
     {
         StateKind[] holding =
             [StateKind.Climb, StateKind.ClimbLedge, StateKind.ClimbToCeiling,
-             StateKind.Ceiling, StateKind.ReactDrag, StateKind.Fall];
+             StateKind.Ceiling, StateKind.ReactDrag, StateKind.Fall, StateKind.Travel];
         StateKind[] standing =
             [StateKind.Idle, StateKind.Walk, StateKind.Land,
              StateKind.WalkOnTop, StateKind.MoveTo, StateKind.ReactClick];

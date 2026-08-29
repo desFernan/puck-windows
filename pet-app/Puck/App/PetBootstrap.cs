@@ -36,6 +36,11 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     /// 펫과 글로 말하는 창. 트레이에서 열거나, 승인을 물어야 할 때 저절로 뜬다.
     private ChatWindow? _chat;
 
+    /// 채팅 창의 섬 — 어디 있고, 펫이 그 안에 사는가.
+    private readonly TankResidency _residency = new();
+    private PetHomeDecider? _home;
+    private TravelState? _travel;
+
     /// 한 번 정해 두고 잊는 설정들의 창. 트레이에서만 연다.
     private SettingsWindow? _settingsWindow;
 
@@ -164,6 +169,8 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             [nameof(HotkeyBindings.TextInput)] = ShowInputBubble,
         });
 
+        _home = new PetHomeDecider(() => _stopwatch.Elapsed.TotalSeconds);
+
         _clock.Tick += OnFrame;
         _clock.Start();
     }
@@ -211,6 +218,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         var ledge = new ClimbLedgeState();
         _walk = new WalkState { Ledge = ledge };
         _moveTo = new MoveToState();
+        _travel = new TravelState();
         var states = new Dictionary<StateKind, IStateHandler>
         {
             [StateKind.Idle] = new IdleState(new WanderScheduler()) { Wander = this },
@@ -222,6 +230,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             [StateKind.ClimbToCeiling] = new ClimbToCeilingState(),
             [StateKind.Ceiling] = new CeilingState(),
             [StateKind.MoveTo] = _moveTo,
+            [StateKind.Travel] = _travel!,
             [StateKind.WalkOnTop] = new WalkOnTopState(),
             [StateKind.ReactClick] = new ReactClickState(),
             [StateKind.ReactDrag] = _drag,
@@ -251,7 +260,10 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         return new Point(display.Left + display.Width / 2, screens.FloorY(cursor));
     }
 
-    private StateContext MakeContext() => new()
+    private StateContext MakeContext()
+        => _residency.IsHome && _residency.Area is { } tank ? TankContext(tank) : DesktopContext();
+
+    private StateContext DesktopContext() => new()
     {
         Body = _body!,
         RoamableArea = _screens!.RoamableArea,
@@ -266,6 +278,27 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         Windows = _windows?.Windows ?? [],
         UnclimbableWindows = UnclimbableWindows(),
         RequestTransition = _ => { },   // CharacterController가 자기 것으로 갈아 끼운다
+    };
+
+    /// 수조 안의 세계. 바탕화면이 통째로 사라지고 상자 하나만 남는다 —
+    /// 유리 상자 안의 펫이 남의 창 옆면을 타고 오를 수는 없다.
+    private StateContext TankContext(Rect tank) => new()
+    {
+        Body = _body!,
+        RoamableArea = tank,
+        AvatarHeight = _avatar!.Size.Height,
+        VisualBounds = _body!.VisualBounds,
+        WalkSpeed = MovementSolver.WalkSpeed * _settings.MovementSpeedMultiplier,
+        LandingY = _ => tank.Bottom,
+        HasGroundUnder = point => point.X >= tank.Left && point.X <= tank.Right,
+        SnapToGround = (point, _) => new Point(
+            Math.Clamp(point.X, tank.Left, tank.Right), tank.Bottom),
+        // 상자 밖으로 타고 나갈 턱은 없다.
+        LedgeBeyond = (_, _, _) => null,
+        AreaAt = _ => tank,
+        Windows = [],
+        UnclimbableWindows = null,
+        RequestTransition = _ => { },
     };
 
     /// 전역 핫키. 지금은 "펫 부르기"만 물린다 — 음성(PTT)은 아직 없다.
@@ -333,6 +366,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         _chat = new ChatWindow();
         _chat.Submitted += text => _ = AskAgentAsync(text);
+        _chat.IslandFrameChanged += OnIslandFrameChanged;
         return _chat;
     }
 
@@ -496,6 +530,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         PutDownAfterDisplayChange();
 
         _pending.Expire(_stopwatch.Elapsed.TotalSeconds);
+        DecideWhereThePetLives();
         ClimbToCeilingWhenAtAWall();
         FollowCursorWhileDragged();
         _controller.Advance(dt);
@@ -568,6 +603,66 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             return;
 
         _controller.Request(StateKind.ClimbToCeiling);
+    }
+
+    /// 채팅 창이 섬 자리를 알려 왔다. 담을 수 없는 수조는 여기서 거절되고,
+    /// 그러면 갈 곳이 없는 것과 같다.
+    ///
+    /// 이미 그 안에 사는 펫은 새 모양에 맞춰 다시 앉힌다 — 창을 끌거나
+    /// 섬을 접으면 발밑이 통째로 옮겨 간다.
+    private void OnIslandFrameChanged(Rect? frame)
+    {
+        if (_avatar is null || _screens is null) return;
+
+        var scale = _residency.ScaleFor(_avatar.DesktopSize);
+        var scaled = new Size(_avatar.DesktopSize.Width * scale, _avatar.DesktopSize.Height * scale);
+        _residency.Report(frame, _screens.Bounds, scaled);
+
+        if (!_residency.IsHome || _residency.Area is not { } tank || _body is null) return;
+
+        _avatar.RuntimeScale = _residency.ScaleFor(_avatar.DesktopSize);
+        _body.Position = new Point(
+            Math.Clamp(_body.Position.X, tank.Left, tank.Right),
+            tank.Bottom);
+    }
+
+    /// 펫이 수조에 있어야 하는가, 바탕화면에 있어야 하는가. 결정이 바뀌면
+    /// 날아서 오간다 — 둘 사이에는 걸어갈 바닥이 없다.
+    private void DecideWhereThePetLives()
+    {
+        if (_home is null || _controller is null || _avatar is null || _travel is null) return;
+
+        _home.IsPetHidden = _window?.IsVisible != true;
+
+        var move = _home.Decide(_residency.Area is not null);
+        if (move is not { } decided) return;
+
+        if (decided == PetHomeDecider.Move.Home && !_residency.IsHome)
+        {
+            // 떠날 때 바로 작아진다. 상자에 들어가는 크기가 되는 것이
+            // 출발의 일부로 읽히고, 도착에 맞춰 줄이려면 도착을 알려 주는
+            // 자리가 하나 더 필요하다.
+            _travel.Destination = () => _residency.StandingPoint();
+            _travel.Then = StateKind.Idle;
+            _controller.Request(StateKind.Travel);
+            _residency.IsHome = true;
+            _avatar.RuntimeScale = _residency.ScaleFor(_avatar.DesktopSize);
+            return;
+        }
+
+        if (decided == PetHomeDecider.Move.Desktop && _residency.IsHome)
+        {
+            _residency.IsHome = false;
+            _avatar.RuntimeScale = 1;
+
+            var floor = _screens is { } screens
+                ? new Point(_body!.Position.X, screens.FloorY(_body.Position))
+                : _body!.Position;
+
+            _travel.Destination = () => floor;
+            _travel.Then = StateKind.Idle;
+            _controller.Request(StateKind.Travel);
+        }
     }
 
     /// 세계가 다시 재어졌으면 서 있던 펫을 새 바닥에 내려놓는다.

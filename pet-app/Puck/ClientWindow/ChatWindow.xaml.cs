@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Input;
+using System.Windows.Media;
 using Puck.ClientWindow.Island;
 using Puck.Localization;
 
@@ -40,6 +41,13 @@ public partial class ChatWindow : Window
 
         UpdateFoldButton();
 
+        // 창이 움직이거나 크기가 바뀌면 섬도 함께 움직인다. 펫이 날아가는
+        // 중이면 그 목적지가 따라 움직여야 한다.
+        LocationChanged += (_, _) => ReportIslandFrame();
+        SizeChanged += (_, _) => ReportIslandFrame();
+        IsVisibleChanged += (_, _) => ReportIslandFrame();
+        Island.LayoutUpdated += (_, _) => ReportIslandFrame();
+
         Append(TranscriptKind.Notice, Strings.ChatPrompt);
     }
 
@@ -49,6 +57,7 @@ public partial class ChatWindow : Window
     {
         Island.IsFolded = !Island.IsFolded;
         UpdateFoldButton();
+        ReportIslandFrame();
     }
 
     private void UpdateFoldButton()
@@ -60,6 +69,42 @@ public partial class ChatWindow : Window
 
     /// 사람이 한 줄 적어 보냈다.
     public event Action<string>? Submitted;
+
+    /// 섬의 바닥이 화면 어디에 있는가 — 가상 화면 물리 픽셀. 없으면 갈 곳이
+    /// 없다는 뜻이다(창이 숨겨졌거나, 아직 재어지지 않았거나).
+    ///
+    /// **외곽선이 아니라 바닥에서** 잰다. 펫의 세계는 그것이 설 수 있는
+    /// 부분이고, 단추가 떠 있는 위쪽은 모양이지 방이 아니다.
+    public event Action<Rect?>? IslandFrameChanged;
+
+    /// 창이 움직이거나 크기가 바뀌거나 접혔을 때마다 다시 알린다.
+    private void ReportIslandFrame()
+    {
+        IslandFrameChanged?.Invoke(IslandFrame());
+    }
+
+    private Rect? IslandFrame()
+    {
+        if (!IsVisible || Island.ActualWidth <= 0 || Island.ActualHeight <= 0) return null;
+
+        try
+        {
+            // 화면 좌표로. 펫이 사는 좌표계가 가상 화면 물리 픽셀이므로
+            // DPI 배율을 다시 곱해 준다 — WPF가 주는 것은 장치 독립 점이다.
+            var topLeft = Island.PointToScreen(new Point(0, 0));
+            var dpi = VisualTreeHelper.GetDpi(this);
+
+            return new Rect(
+                topLeft.X, topLeft.Y,
+                Island.ActualWidth * dpi.DpiScaleX,
+                Island.ActualHeight * dpi.DpiScaleY);
+        }
+        catch (InvalidOperationException)
+        {
+            // 아직 창이 만들어지지 않았다. 다음 배치에서 다시 묻는다.
+            return null;
+        }
+    }
 
     /// 어느 스레드에서 불러도 된다 — 에이전트 루프는 스레드 풀을 오간다.
     public void Append(TranscriptKind kind, string text)
