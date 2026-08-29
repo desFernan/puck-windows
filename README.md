@@ -13,17 +13,23 @@ Bugs, feature requests, build help, or just want to hang out — the
 [support server](https://discord.gg/ePBZVnwSYE) is the fastest way to reach
 us. Come say hi!
 
-**Current status: the pet walks the screen, and you can talk to it.**
-A transparent, always-on-top, click-through overlay shows the avatar; physics
-and the state machine are running; click, drag and throw work; it lands on
-the taskbar. It reads avatar folders made on macOS as-is. It senses windows
-and UI elements, and a chat window (tray → "Open chat") talks to Claude with
-nine tools — window listing, UI element search, pointing, clicking, screen
-capture, app launch and PowerShell. Tools that change things ask before they
-run. The pet climbs a wall or the screen's own edge all the way to the ceiling
-and crawls it upside down. The tray's "Settings…" holds the avatar, movement
-speed, the theme and launch-at-login. The code editor and terminal panel are
-not ported yet.
+A Windows desktop pet that is also an AI agent. One .NET 8 app:
+
+- **The pet** — a transparent, always-on-top, click-through character that
+  walks your screen, climbs a window or the screen's own edge all the way to
+  the ceiling and crawls it upside down, lands on the taskbar, and can be
+  clicked, dragged and thrown.
+- **Its chat window** — tray → **대화 열기**. It drives Windows through nine
+  tools: window listing, frontmost window, UI element search, pointing,
+  clicking, screen capture, app launch, `run_shell` and `run_powershell`.
+  Anything that changes something asks before it runs.
+
+The tray also holds **설정…** (avatar, movement speed, theme,
+launch-at-login), **커스터마이징 폴더 열기** and **아바타 다시 불러오기**. The
+agent core (chat, tools, approvals) lives in `pet-app/Puck/Agent`.
+
+Not ported yet: the code editor, terminal pane and workspaces that live in
+puck-mac's separate `PuckClient` app.
 
 ## Build
 
@@ -37,7 +43,7 @@ Needs the .NET 8 SDK (or newer, targeting `net8.0-windows`).
 ## Test
 
 ```powershell
-pet-app\scripts\test.ps1   # xUnit, unattended
+pet-app\scripts\test.ps1   # xUnit
 ```
 
 Unattended, exits nonzero on any failure.
@@ -65,24 +71,19 @@ adding a key does not need a restart. macOS's `run_applescript` is
 
 ## Making it your own
 
-Everything you can swap lives in one folder — same package format as
+Everything you can swap lives in one folder — the same package format as
 macOS, just a different root:
 
 ```
 %LOCALAPPDATA%\Puck\
-    Avatars\<name>\     one folder per character
-    Tank\seabed.png     the picture the island is filled with
-    logs\puck-YYYY-MM-DD.jsonl
+    Avatars\<name>\                  one folder per character
     settings.json
+    .env
+    logs\puck-YYYY-MM-DD.jsonl
 ```
 
-These folders are created automatically on first launch.
-
-### The tank
-
-Drop a `seabed.png` into `Tank\` and it replaces the one the app ships. It is
-read once at launch, so restart the pet after changing it — same behavior as
-macOS, since the rendering rules for the island are unchanged in the port.
+The tray's **커스터마이징 폴더 열기** opens it, and creates the folders if they
+are not there yet.
 
 ### A character
 
@@ -95,18 +96,47 @@ Avatars\my-pet\
     sounds\*.wav
 ```
 
-The package format (`schema_version: 1`) is defined by puck-mac and read
-as-is on Windows — an avatar folder you built on macOS drops in unchanged.
-The full field reference (`clips`, `emotions`, `sounds`, `hitbox`,
-`bounce_intensity`, the minimal working manifest) lives in
-[puck-mac's README](https://github.com/desFernan/puck-mac#a-character); it
-applies here without changes.
+#### Adding one, start to finish
 
-**Loading a new or edited avatar on Windows:** drop the folder into
-`Avatars\`, then use "Reload avatars" in the tray menu — no restart needed,
-same as macOS's reload button.
+1. **Open the folder.** Tray → **커스터마이징 폴더 열기**. It creates `Avatars\`
+   if it is not there yet, so this also tells you the folder exists.
+2. **Make a folder for your character** inside `Avatars\`. Its name is the name
+   the picker shows: `Avatars\my-pet\` appears as `my-pet`.
+3. **Drop in one PNG and a `manifest.json`.** One drawing is a working
+   character — `idle` is the only clip that has to exist and every other state
+   falls back to it, so you can start with a single picture and add walking,
+   climbing and the rest whenever you feel like it. Transparent background,
+   drawn facing right (the pet is mirrored when it walks the other way).
+   The smallest manifest that works:
+
+   ```json
+   {
+     "schema_version": 1,
+     "name": "my-pet",
+     "type": "sprites",
+     "hitbox": { "width": 130, "height": 133 },
+     "clips": { "idle": "idle" }
+   }
+   ```
+
+   `hitbox` is the size it will be drawn and clicked at — match your drawing's
+   proportions or it will look squashed.
+4. **Load it.** Tray → **아바타 다시 불러오기**, then pick it under **설정…**.
+   No restart: the reload rebuilds the running pet from what is on disk, which
+   is also how you see a redrawn sprite or an edited manifest without quitting.
+
+If something is wrong with the package the pet does not change and the reason
+is in the log (`%LOCALAPPDATA%\Puck\logs\`) — a missing `idle` file, a manifest
+that will not parse, or a `schema_version` this build does not know.
+
+The package format (`schema_version: 1`) is defined by puck-mac and read here
+as-is, so an avatar folder built on macOS drops in unchanged. The full field
+reference — `clips`, `emotions`, `sounds`, `hitbox`, `bounce_intensity` and
+what each one defaults to — lives in
+[puck-mac's README](https://github.com/desFernan/puck-mac#a-character) and
+applies here without changes.
 
 ## Community
 
-Want to help plan the Windows port, or just curious about progress — join us
-on **[Discord](https://discord.gg/ePBZVnwSYE)**.
+Questions, bug reports, feature ideas, or just want to show off your custom
+avatar — join us on **[Discord](https://discord.gg/ePBZVnwSYE)**.
