@@ -2,6 +2,11 @@
   "schema_version": 1,
   "name": "dummy",
   "type": "sprites",
-  "hitbox": { "width": 130, "height": 133 },
-  "clips": { "idle": "idle" }
+  "hitbox": {
+    "width": 168,
+    "height": 172
+  },
+  "clips": {
+    "idle": "idle"
+  }
 }
