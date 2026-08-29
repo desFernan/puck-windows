@@ -63,27 +63,6 @@ public class DisplayChangeRelocationTests
 
         Assert.Equal(950, DisplayChangeRelocation.Contained(new Point(5000, 800), Pet, area).X);
     }
-
-    [Theory]
-    [InlineData(StateKind.Climb)]
-    [InlineData(StateKind.ClimbLedge)]
-    [InlineData(StateKind.ReactDrag)]
-    [InlineData(StateKind.Fall)]
-    public void APetHoldingSomethingThatIsNotBelowItKeepsItsPlace(StateKind state)
-    {
-        // 그런 펫의 발을 바닥에 놓으면 화면을 가로질러 떨어뜨리는 것이 된다.
-        Assert.False(DisplayChangeRelocation.StandsOnGround(state));
-    }
-
-    [Theory]
-    [InlineData(StateKind.Idle)]
-    [InlineData(StateKind.Walk)]
-    [InlineData(StateKind.MoveTo)]
-    [InlineData(StateKind.WalkOnTop)]
-    public void APetOnTheGroundIsPutDownAgain(StateKind state)
-    {
-        Assert.True(DisplayChangeRelocation.StandsOnGround(state));
-    }
 }
 
 /// 무언가를 붙잡고 있는 펫은 세계가 다시 재어져도 놓지 않는다.
@@ -118,12 +97,24 @@ public class HoldingOnTests
     }
 
     /// 두 목록이 모든 상태를 덮는지. 새 상태가 생기면 여기서 걸린다.
+    ///
+    /// 세는 것이 아니라 맞춰 본다 — 개수만 세면 상태를 하나 지우고 하나
+    /// 더하는 변경이 그대로 지나간다.
     [Fact]
     public void 모든_상태가_둘_중_하나로_분류된다()
     {
-        foreach (StateKind state in Enum.GetValues<StateKind>())
-            _ = DisplayChangeRelocation.StandsOnGround(state);
+        StateKind[] holding =
+            [StateKind.Climb, StateKind.ClimbLedge, StateKind.ClimbToCeiling,
+             StateKind.Ceiling, StateKind.ReactDrag, StateKind.Fall];
+        StateKind[] standing =
+            [StateKind.Idle, StateKind.Walk, StateKind.Land,
+             StateKind.WalkOnTop, StateKind.MoveTo, StateKind.ReactClick];
 
-        Assert.Equal(12, Enum.GetValues<StateKind>().Length);
+        Assert.Equal(
+            Enum.GetValues<StateKind>().OrderBy(s => s),
+            holding.Concat(standing).OrderBy(s => s));
+
+        Assert.All(holding, s => Assert.False(DisplayChangeRelocation.StandsOnGround(s)));
+        Assert.All(standing, s => Assert.True(DisplayChangeRelocation.StandsOnGround(s)));
     }
 }

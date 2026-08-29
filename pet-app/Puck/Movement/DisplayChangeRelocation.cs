@@ -14,23 +14,25 @@ namespace Puck.Movement;
 /// 같다 — 모니터를 뽑아 보지 않고 규칙을 시험할 수 있어야 한다.
 public static class DisplayChangeRelocation
 {
-    /// 세계가 다시 재어졌을 때 발밑을 잃는 상태인가.
+    /// 세계가 다시 재어졌을 때 새 바닥에 내려놓아도 되는 상태인가.
     ///
-    /// 아래에 있지 않은 것을 붙잡고 있는 펫(창 옆면, 화면 턱, 천장, 사람
+    /// 아래에 있지 않은 것을 붙잡고 있는 펫(천장, 창 옆면, 화면 턱, 사람
     /// 손)은 제자리를 지킨다 — 그런 펫의 발을 바닥에 놓으면 화면을 가로질러
     /// 떨어뜨리는 것이 된다.
     ///
-    /// 목록이지 기본값이 아닌 이유: 여기 빠진 상태는 조용히 "바닥에 서
-    /// 있다"가 되어, 발밑에 아무것도 없는 펫이 해상도가 바뀌는 순간
-    /// 바닥으로 순간이동한다. 매달리거나 붙잡는 상태를 새로 만들면 여기에
-    /// 더해야 한다.
+    /// **딛고 선 것만 적고, 모르는 것은 제자리에 둔다.** 반대로 적으면
+    /// 나중에 더해지는 상태가 잠자코 "땅에 서 있다"가 되는데, 그중 하나가
+    /// 매달린 것일 때 아무도 모르는 사이 펫이 화면을 가로질러 떨어진다.
+    /// 실제로 그럴 뻔했다 — Ceiling과 ClimbToCeiling이 이 목록보다 늦게 왔다.
+    ///
+    /// 반대 방향으로 틀리면 대신 벌어지는 일은 작다: 딛고 선 펫이 한 프레임
+    /// 동안 옛 바닥 선에 남고, 다음 프레임에 떨어진다. 이 규칙이 생기기 전의
+    /// 동작 그대로다.
     public static bool StandsOnGround(StateKind state) => state switch
     {
-        StateKind.Climb or StateKind.ClimbLedge or StateKind.ReactDrag or StateKind.Fall => false,
-        // 천장에 거꾸로 매달려 있거나 거기로 오르는 중이다. 붙잡은 것이
-        // 위에 있으므로 바닥이 움직여도 놓지 않는다.
-        StateKind.Ceiling or StateKind.ClimbToCeiling => false,
-        _ => true,
+        StateKind.Idle or StateKind.Walk or StateKind.Land or StateKind.WalkOnTop
+            or StateKind.MoveTo or StateKind.ReactClick => true,
+        _ => false,
     };
 
     /// 영역 안으로. 가로는 `PetBounds.Contain` 그대로고, 세로를 여기서
