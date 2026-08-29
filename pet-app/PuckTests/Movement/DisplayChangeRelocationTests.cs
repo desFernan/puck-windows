@@ -85,3 +85,45 @@ public class DisplayChangeRelocationTests
         Assert.True(DisplayChangeRelocation.StandsOnGround(state));
     }
 }
+
+/// 무언가를 붙잡고 있는 펫은 세계가 다시 재어져도 놓지 않는다.
+///
+/// 상태를 새로 만들고 이 목록에 더하기를 잊으면 조용히 "바닥에 서 있다"가
+/// 되어, 발밑에 아무것도 없는 펫이 해상도가 바뀌는 순간 바닥으로
+/// 순간이동한다. 천장 상태 둘이 실제로 그렇게 빠져 있었다.
+public class HoldingOnTests
+{
+    [Theory]
+    [InlineData(StateKind.Climb)]
+    [InlineData(StateKind.ClimbLedge)]
+    [InlineData(StateKind.ClimbToCeiling)]
+    [InlineData(StateKind.Ceiling)]
+    [InlineData(StateKind.ReactDrag)]
+    [InlineData(StateKind.Fall)]
+    public void 붙잡고_있으면_내려놓지_않는다(StateKind state)
+    {
+        Assert.False(DisplayChangeRelocation.StandsOnGround(state));
+    }
+
+    [Theory]
+    [InlineData(StateKind.Idle)]
+    [InlineData(StateKind.Walk)]
+    [InlineData(StateKind.Land)]
+    [InlineData(StateKind.WalkOnTop)]
+    [InlineData(StateKind.MoveTo)]
+    [InlineData(StateKind.ReactClick)]
+    public void 발로_서_있으면_새_바닥에_내려놓는다(StateKind state)
+    {
+        Assert.True(DisplayChangeRelocation.StandsOnGround(state));
+    }
+
+    /// 두 목록이 모든 상태를 덮는지. 새 상태가 생기면 여기서 걸린다.
+    [Fact]
+    public void 모든_상태가_둘_중_하나로_분류된다()
+    {
+        foreach (StateKind state in Enum.GetValues<StateKind>())
+            _ = DisplayChangeRelocation.StandsOnGround(state);
+
+        Assert.Equal(12, Enum.GetValues<StateKind>().Length);
+    }
+}

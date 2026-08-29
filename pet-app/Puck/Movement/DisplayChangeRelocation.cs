@@ -16,12 +16,20 @@ public static class DisplayChangeRelocation
 {
     /// 세계가 다시 재어졌을 때 발밑을 잃는 상태인가.
     ///
-    /// 아래에 있지 않은 것을 붙잡고 있는 펫(창 옆면, 화면 턱, 사람 손)은
-    /// 제자리를 지킨다 — 그런 펫의 발을 바닥에 놓으면 화면을 가로질러
+    /// 아래에 있지 않은 것을 붙잡고 있는 펫(창 옆면, 화면 턱, 천장, 사람
+    /// 손)은 제자리를 지킨다 — 그런 펫의 발을 바닥에 놓으면 화면을 가로질러
     /// 떨어뜨리는 것이 된다.
+    ///
+    /// 목록이지 기본값이 아닌 이유: 여기 빠진 상태는 조용히 "바닥에 서
+    /// 있다"가 되어, 발밑에 아무것도 없는 펫이 해상도가 바뀌는 순간
+    /// 바닥으로 순간이동한다. 매달리거나 붙잡는 상태를 새로 만들면 여기에
+    /// 더해야 한다.
     public static bool StandsOnGround(StateKind state) => state switch
     {
         StateKind.Climb or StateKind.ClimbLedge or StateKind.ReactDrag or StateKind.Fall => false,
+        // 천장에 거꾸로 매달려 있거나 거기로 오르는 중이다. 붙잡은 것이
+        // 위에 있으므로 바닥이 움직여도 놓지 않는다.
+        StateKind.Ceiling or StateKind.ClimbToCeiling => false,
         _ => true,
     };
 

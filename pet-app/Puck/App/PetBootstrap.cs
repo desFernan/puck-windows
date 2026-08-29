@@ -499,6 +499,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         _pending.Expire(_stopwatch.Elapsed.TotalSeconds);
         ClimbToCeilingWhenAtAWall();
+        FollowCursorWhileDragged();
         _controller.Advance(dt);
         _presenter?.Advance(dt, _body, _controller);
         _body.UpdateBounce(_avatar.CurrentClipKey, _stopwatch.Elapsed);
@@ -509,6 +510,30 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         _window.MoveTo(_body.Position, _body.VisualBounds);
         _window.UpdateClickThrough(_avatar);
+    }
+
+    /// 끌려가는 동안에는 큐를 거치지 않고 지금 커서를 직접 본다.
+    ///
+    /// 마우스는 `WH_MOUSE_LL` 훅으로 들어오는데, 훅 콜백은 빨리 끝나야
+    /// 하므로 좌표만 읽어 `DispatcherPriority.Input`으로 UI 스레드에
+    /// 넘긴다. 그 우선순위는 `Render`보다 **낮아서**, 바쁠 때는 방금 온
+    /// 마우스 이동이 이번 프레임의 그리기 뒤로 밀린다. 그러면 펫이 잡은
+    /// 손에서 한 프레임 이상 뒤처진다.
+    ///
+    /// puck-linux는 같은 문제를 반대쪽에서 풀었다 — 16ms 타이머를 기다리지
+    /// 말고 드래그 콜백에서 창을 바로 옮기는 것이다(`b08443c`). 여기서
+    /// 그렇게 하면 창 위치를 쓰는 주체가 둘이 되고, 프레임 루프가 끝마다
+    /// 지키는 "펫은 실제 화면 위에 있다" 불변식을 건너뛴다. 늦게 읽는
+    /// 쪽이 같은 지연을 없애면서 그 둘을 다 지킨다.
+    ///
+    /// 던질 때의 속도는 여전히 이동 이벤트가 잰다 — 그건 사람이 손을
+    /// 어떻게 움직였는가의 기록이지 지금 어디인가가 아니다.
+    private void FollowCursorWhileDragged()
+    {
+        if (_drag is null || _controller?.Current != StateKind.ReactDrag) return;
+        if (_drag.DragPosition is null) return;   // 아직 첫 이동 전이다
+
+        _drag.DragPosition = PetOverlayWindow.CursorPosition;
     }
 
     /// 배회가 하려던 것을 놓는다.
