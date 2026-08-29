@@ -7,10 +7,10 @@
 >
 > Platforms: [macOS](https://github.com/desFernan/puck-mac) · **Windows** (here) · [Linux](https://github.com/desFernan/puck-linux)
 
-### 💬 [Join the Discord](https://discord.gg/ePBZVnwSYE)
+### 💬 [Join the Discord](https://discord.gg/nGqtBGP857)
 
 Bugs, feature requests, build help, or just want to hang out — the
-[support server](https://discord.gg/ePBZVnwSYE) is the fastest way to reach
+[support server](https://discord.gg/nGqtBGP857) is the fastest way to reach
 us. Come say hi!
 
 A Windows desktop pet that is also an AI agent. One .NET 8 app:
@@ -139,4 +139,4 @@ applies here without changes.
 ## Community
 
 Questions, bug reports, feature ideas, or just want to show off your custom
-avatar — join us on **[Discord](https://discord.gg/ePBZVnwSYE)**.
+avatar — join us on **[Discord](https://discord.gg/nGqtBGP857)**.
