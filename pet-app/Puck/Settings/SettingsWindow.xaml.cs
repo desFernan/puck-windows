@@ -40,7 +40,6 @@ public partial class SettingsWindow : Window
         _onAvatarChanged = onAvatarChanged;
 
         Title = Strings.SettingsTitle;
-        NotchCaption.Text = Strings.SettingsNotchCaption;
         LaunchCaption.Text = Strings.SettingsLaunchCaption;
 
         Load();
@@ -60,9 +59,6 @@ public partial class SettingsWindow : Window
 
         AvoidFocused.Click += (_, _) => Commit(() =>
             _store.AvoidFocusedWindow = AvoidFocused.IsChecked == true);
-
-        NotchEnabled.Click += (_, _) => Commit(() =>
-            _store.NotchEnabled = NotchEnabled.IsChecked == true);
 
         ThemePicker.SelectionChanged += (_, _) => Commit(() =>
         {
@@ -131,7 +127,6 @@ public partial class SettingsWindow : Window
             SpeedSlider.Value = _store.MovementSpeedMultiplier;
             SpeedValue.Text = $"{SpeedSlider.Value:0.00}×";
             AvoidFocused.IsChecked = _store.AvoidFocusedWindow;
-            NotchEnabled.IsChecked = _store.NotchEnabled;
 
             ThemePicker.ItemsSource = new[] { Strings.SettingsThemeDark, Strings.SettingsThemeLight };
             ThemePicker.SelectedIndex =

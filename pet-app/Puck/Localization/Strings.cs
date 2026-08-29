@@ -27,13 +27,9 @@ public static class Strings
         ["tray.mute"] = "소리 끄기",
         ["settings.title"] = "Puck 설정",
         ["settings.avatarCaption"] = "커스터마이징 폴더의 Avatars에 든 것들입니다.",
-        ["settings.notchCaption"] = "맥북의 카메라 하우징에 해당하는 것을 화면 위 한가운데에 그립니다. 켜면 펫도 그것을 피해 다닙니다.",
         ["settings.launchCaption"] = "이 사용자 계정에만 등록합니다.",
         ["settings.themeDark"] = "어둡게",
         ["settings.themeLight"] = "밝게",
-        ["notch.nothingPlaying"] = "재생 중인 것이 없습니다",
-        ["notch.playing"] = "재생 중",
-        ["notch.paused"] = "멈춤",
     };
 
     /// 없는 키는 키 자체를 돌려준다 — 문자열 하나가 빠졌다고 UI가
@@ -56,13 +52,9 @@ public static class Strings
     public static string TrayMute => Get("tray.mute");
     public static string SettingsTitle => Get("settings.title");
     public static string SettingsAvatarCaption => Get("settings.avatarCaption");
-    public static string SettingsNotchCaption => Get("settings.notchCaption");
     public static string SettingsLaunchCaption => Get("settings.launchCaption");
     public static string SettingsThemeDark => Get("settings.themeDark");
     public static string SettingsThemeLight => Get("settings.themeLight");
-    public static string NotchNothingPlaying => Get("notch.nothingPlaying");
-    public static string NotchPlaying => Get("notch.playing");
-    public static string NotchPaused => Get("notch.paused");
 
     /// `{0}`은 도구 이름.
     public static string ChatApprovalQuestion => Get("chat.approvalQuestion");

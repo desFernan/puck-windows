@@ -9,31 +9,18 @@ namespace Puck.Movement;
 /// Win32가 이미 좌상단 원점이라 뒤집을 것이 없다.
 public sealed record ScreenSpace
 {
-    public ScreenSpace(IReadOnlyList<Rect> screenBoundsList, IReadOnlyList<Rect> workingAreas,
-                       IReadOnlyList<ScreenNotch?>? notches = null)
+    public ScreenSpace(IReadOnlyList<Rect> screenBoundsList, IReadOnlyList<Rect> workingAreas)
     {
         if (screenBoundsList.Count == 0)
             throw new ArgumentException("디스플레이가 하나도 없습니다", nameof(screenBoundsList));
         if (screenBoundsList.Count != workingAreas.Count)
             throw new ArgumentException("디스플레이 수와 작업 영역 수가 다릅니다", nameof(workingAreas));
-        if (notches is not null && notches.Count != screenBoundsList.Count)
-            throw new ArgumentException("디스플레이 수와 노치 수가 다릅니다", nameof(notches));
-
         ScreenBoundsList = screenBoundsList;
         WorkingAreas = workingAreas;
-        Notches = notches ?? new ScreenNotch?[screenBoundsList.Count];
     }
 
     public IReadOnlyList<Rect> ScreenBoundsList { get; }
     public IReadOnlyList<Rect> WorkingAreas { get; }
-
-    /// 디스플레이마다 하나씩, 없으면 null. ScreenBoundsList와 같은 순서다.
-    ///
-    /// 프레임마다 묻지 않고 여기 들고 있는 이유는 이것이 하드웨어가 바뀔 때
-    /// 바뀌는 값이기 때문이다. 화면 구성이 다시 측정되는 순간(모니터 착탈,
-    /// 해상도 변경)이 곧 이 답이 바뀔 수 있는 모든 순간이고, 사라진
-    /// 디스플레이의 노치는 그냥 목록에 없다.
-    public IReadOnlyList<ScreenNotch?> Notches { get; }
 
     public Rect Bounds => Union(ScreenBoundsList);
     public Rect RoamableArea => Union(WorkingAreas);
@@ -41,38 +28,14 @@ public sealed record ScreenSpace
     /// 지금 연결된 디스플레이 구성. 전부 잠들어 목록이 비면 null —
     /// 호출자는 마지막으로 알던 ScreenSpace를 그대로 쓴다.
     ///
-    /// <param name="withNotches">노치를 세계에 넣을 것인가. 노치 패널이
-    /// 꺼져 있으면 false여야 한다 — 그려지지 않는 노치는 펫이 없는 것을
-    /// 피해 돌고 없는 것 아래서 멈추게 만들 뿐이다. mac에서는 가상 노치가
-    /// 전체화면에서만 천장에 닿지만 여기서는 늘 닿기 때문에 그 위험이 더
-    /// 크다. ScreenNotch의 주석이 같은 이야기를 한다.</param>
-    public static ScreenSpace? Current(bool withNotches = false)
+    public static ScreenSpace? Current()
     {
         var screens = WinForms.Screen.AllScreens;
         if (screens.Length == 0) return null;
 
         var bounds = screens.Select(s => ToRect(s.Bounds)).ToList();
         var working = screens.Select(s => ToRect(s.WorkingArea)).ToList();
-        var notches = withNotches
-            ? bounds.Select(b => ScreenNotch.Virtual(b, ScaleOf(b))).ToList()
-            : null;
-        return new ScreenSpace(bounds, working, notches);
-    }
-
-    /// 그 화면의 DPI 배율. 물어볼 수 없으면 1 — 노치가 조금 작게 그려지는
-    /// 것이 노치가 없는 것보다 낫다.
-    private static double ScaleOf(Rect screenBounds)
-    {
-        var middle = new Interop.Win32.POINT
-        {
-            X = (int)(screenBounds.Left + screenBounds.Width / 2),
-            Y = (int)(screenBounds.Top + screenBounds.Height / 2),
-        };
-        var monitor = Interop.Win32.MonitorFromPoint(middle, Interop.Win32.MONITOR_DEFAULTTONEAREST);
-        if (monitor == IntPtr.Zero) return 1;
-        if (Interop.Win32.GetDpiForMonitor(monitor, Interop.Win32.MDT_EFFECTIVE_DPI, out var dpiX, out _) != 0)
-            return 1;
-        return dpiX == 0 ? 1 : dpiX / 96.0;
+        return new ScreenSpace(bounds, working);
     }
 
     public Rect ScreenContaining(Point point)
@@ -151,42 +114,6 @@ public sealed record ScreenSpace
         var index = IndexOfScreenContaining(point);
         return WorkingAreas[index].Top;
     }
-
-    /// 그 작업 영역 위에 걸린 노치. 없으면 null.
-    ///
-    /// 겹침이 아니라 **가로로** 맞춘다. mac에서 이렇게 하는 이유는 메뉴
-    /// 막대가 있을 때 하우징이 작업 영역보다 통째로 위에 있어서 겹침 검사가
-    /// 있는 것도 못 찾기 때문이다. 여기서는 겹치기는 하지만 규칙은 같게
-    /// 두었다 — 작업 표시줄을 화면 위쪽에 두면 mac과 똑같은 배치가 된다.
-    ///
-    /// 노치 하나가 아니라 목록인 이유: 디스플레이가 둘이면 펫이 지금 어느
-    /// 화면의 천장을 기고 있느냐가 머리 위에 뭐가 있는지를 정한다.
-    public ScreenNotch? NotchOver(Rect area)
-    {
-        for (var i = 0; i < WorkingAreas.Count; i++)
-        {
-            if (WorkingAreas[i] != area) continue;
-            return Notches[i];
-        }
-
-        // 넘겨받은 영역이 우리 목록에 없다 — 화면 구성이 이 프레임 도중에
-        // 바뀌었다는 뜻이다. 가로로 가장 잘 맞는 것을 준다.
-        var centre = area.Left + area.Width / 2;
-        for (var i = 0; i < WorkingAreas.Count; i++)
-        {
-            var a = WorkingAreas[i];
-            if (centre >= a.Left && centre <= a.Right) return Notches[i];
-        }
-        return null;
-    }
-
-    /// `x`에서 그 영역의 천장. 노치 아래에서는 노치의 아랫변이다.
-    ///
-    /// 천장이 선이 아니라 x의 함수인 이유는 노치가 거기 매달려 있기
-    /// 때문이다. "여기서 펫이 얼마나 높이 갈 수 있는가"를 묻는 모든 곳이
-    /// 이렇게 묻는다.
-    public double CeilingY(double x, Rect area)
-        => NotchOver(area) is { } notch ? notch.Ceiling(x, area.Top) : area.Top;
 
     private int IndexOfScreenContaining(Point point)
     {

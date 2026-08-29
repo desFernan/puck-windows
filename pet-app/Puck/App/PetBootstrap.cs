@@ -10,7 +10,6 @@ using Puck.Input;
 using Puck.Localization;
 using Puck.Movement;
 using Puck.Movement.States;
-using Puck.NowPlaying;
 using Puck.Overlay;
 using Puck.Pointing;
 using Puck.Tools;
@@ -40,11 +39,6 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     /// 한 번 정해 두고 잊는 설정들의 창. 트레이에서만 연다.
     private SettingsWindow? _settingsWindow;
 
-    /// 화면 위 한가운데의 노치. 설정으로 켰을 때만 있다.
-    private NotchWindow? _notch;
-
-    /// 지난 프레임에 노치가 걸려 있던 자리. 화면 구성이 바뀌면 따라간다.
-    private Rect? _lastNotch;
 
     /// 지난 프레임에 펫이 걷던 세계의 크기. 이것이 바뀌면 딛고 있던 바닥이
     /// 사라졌을 수 있다.
@@ -203,7 +197,7 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
             return;
         }
 
-        if (_screens is null) Volatile.Write(ref _screens, ScreenSpace.Current(_settings.NotchEnabled));
+        if (_screens is null) Volatile.Write(ref _screens, ScreenSpace.Current());
         if (_screens is null) return;
 
         var start = _body?.Position ?? StartPosition(_screens);
@@ -269,8 +263,6 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
         SnapToGround = _screens.NearestStandablePoint,
         LedgeBeyond = _screens.LedgeBeyond,
         AreaAt = _screens.WorkingAreaContaining,
-        NotchOver = _screens.NotchOver,
-        CeilingAt = _screens.CeilingY,
         Windows = _windows?.Windows ?? [],
         UnclimbableWindows = UnclimbableWindows(),
         RequestTransition = _ => { },   // CharacterController가 자기 것으로 갈아 끼운다
@@ -496,11 +488,10 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         // 디스플레이 구성이 바뀌었을 수 있다. 목록이 비면(전부 잠듦)
         // 마지막으로 알던 것을 그대로 쓴다.
-        Volatile.Write(ref _screens, ScreenSpace.Current(_settings.NotchEnabled) ?? _screens);
+        Volatile.Write(ref _screens, ScreenSpace.Current() ?? _screens);
         PutDownAfterDisplayChange();
 
         _pending.Expire(_stopwatch.Elapsed.TotalSeconds);
-        PlaceNotch();
         ClimbToCeilingWhenAtAWall();
         _controller.Advance(dt);
         _presenter?.Advance(dt, _body, _controller);
@@ -512,36 +503,6 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
 
         _window.MoveTo(_body.Position, _body.VisualBounds);
         _window.UpdateClickThrough(_avatar);
-    }
-
-    /// 노치 창을 지금의 화면 구성과 설정에 맞춘다.
-    ///
-    /// 매 프레임 불리지만 대부분 아무것도 하지 않는다 — 노치는 하드웨어가
-    /// 바뀔 때 바뀌는 것이라, `_screens`가 다시 재어졌을 때만 실제로 움직인다.
-    ///
-    /// 어느 노치를 쓰는가: 커서가 있는 화면이 아니라 **주 디스플레이**의
-    /// 것이다. 노치가 mac에서 화면마다 하나씩 있는 것과 달리 여기서는 그리는
-    /// 물건이고, 모니터마다 하나씩 띄우면 화면 셋에 검은 막대 셋이 생긴다.
-    private void PlaceNotch()
-    {
-        if (_screens is null) return;
-
-        // 설정으로 껐으면 ScreenSpace에도 노치가 없다 — 펫의 세계와 그리는
-        // 것이 같은 한 곳에서 갈린다.
-        var notch = _screens.Notches.FirstOrDefault(n => n is not null);
-        if (notch is not { } placed)
-        {
-            if (_notch is null) return;
-            _notch.Retire();
-            _lastNotch = null;
-            return;
-        }
-
-        if (_lastNotch == placed.Rect && _notch is not null) return;
-        _lastNotch = placed.Rect;
-
-        _notch ??= new NotchWindow(new NowPlayingStore(new SystemNowPlayingReader()));
-        _notch.PlaceOn(placed.Rect);
     }
 
     /// 배회가 하려던 것을 놓는다.

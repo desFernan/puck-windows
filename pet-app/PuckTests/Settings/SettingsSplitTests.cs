@@ -18,13 +18,6 @@ public class SettingsSplitTests
 
     // --- 새 설정들 ---
 
-    /// 노치는 요청하지 않은 사람의 화면에 없던 물건을 만들면 안 된다.
-    [Fact]
-    public void 노치는_기본이_꺼짐이다()
-    {
-        Assert.False(Fresh().NotchEnabled);
-    }
-
     /// 사람이 끈 소리와 집중 지원이 끈 소리는 다른 것이라 따로 저장된다.
     [Fact]
     public void 음소거는_저장되고_다시_읽힌다()
@@ -37,18 +30,6 @@ public class SettingsSplitTests
         store.Save();
 
         Assert.True(SettingsStore.Load(path).Muted);
-    }
-
-    [Fact]
-    public void 노치_설정도_저장되고_다시_읽힌다()
-    {
-        var path = Path.Combine(Path.GetTempPath(), $"puck-settings-{Guid.NewGuid():N}.json");
-        var store = SettingsStore.Load(path);
-
-        store.NotchEnabled = true;
-        store.Save();
-
-        Assert.True(SettingsStore.Load(path).NotchEnabled);
     }
 
     // --- 테마 ---

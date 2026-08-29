@@ -155,7 +155,7 @@ public class ScreenEdgeClimbTests
         var body = new CharacterBody(new FakeAvatar { VisualBounds = Pet }, new Point(500, 0));
         var states = new Dictionary<StateKind, IStateHandler>
         {
-            [StateKind.Ceiling] = new CeilingState(duration: () => 100, hang: () => 1),
+            [StateKind.Ceiling] = new CeilingState(duration: () => 100),
             [StateKind.Idle] = new IdleState(new WanderScheduler(new Random(1))),
         };
         var controller = new CharacterController(body, states, StateKind.Ceiling, () => new StateContext
@@ -187,7 +187,7 @@ public class ScreenEdgeClimbTests
     public void 천장에_머무는_동안은_뒤집힌_채로_둔다()
     {
         var body = new CharacterBody(new FakeAvatar { VisualBounds = Pet }, new Point(500, 0));
-        var ceiling = new CeilingState(duration: () => 100, hang: () => 1);
+        var ceiling = new CeilingState(duration: () => 100);
         var states = new Dictionary<StateKind, IStateHandler> { [StateKind.Ceiling] = ceiling };
         var controller = new CharacterController(body, states, StateKind.Ceiling, () => new StateContext
         {

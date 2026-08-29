@@ -54,11 +54,6 @@
       <TextBlock Text="켜면 맨 앞 창을 벽이 아니라 없는 것처럼 지나칩니다."
                  Style="{StaticResource Caption}" />
 
-      <!-- 노치 -->
-      <TextBlock Text="노치" Style="{StaticResource SectionHeader}" Margin="0,20,0,8" />
-      <CheckBox x:Name="NotchEnabled" Content="화면 위에 노치 보이기" />
-      <TextBlock x:Name="NotchCaption" Style="{StaticResource Caption}" />
-
       <!-- 모양 -->
       <TextBlock Text="모양" Style="{StaticResource SectionHeader}" Margin="0,20,0,8" />
       <ComboBox x:Name="ThemePicker" />

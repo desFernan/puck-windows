@@ -58,25 +58,6 @@ public sealed record StateContext
     }
     private readonly Func<Point, Rect>? _areaAt;
 
-    /// 그 영역 위에 걸린 노치. 없으면 null — 기본도 그것이다. 노치는 켜야
-    /// 생기는 것이라, 그것을 꾸미지 않은 테스트의 세계에는 노치가 없다.
-    public Func<Rect, ScreenNotch?> NotchOver
-    {
-        get => _notchOver ?? (_ => null);
-        init => _notchOver = value;
-    }
-    private readonly Func<Rect, ScreenNotch?>? _notchOver;
-
-    /// 그 영역의 `x`에서 천장. 노치 아래에서는 노치의 아랫변이다.
-    ///
-    /// 기본은 영역의 윗변, 즉 노치가 없을 때의 답이다.
-    public Func<double, Rect, double> CeilingAt
-    {
-        get => _ceilingAt ?? ((_, area) => area.Top);
-        init => _ceilingAt = value;
-    }
-    private readonly Func<double, Rect, double>? _ceilingAt;
-
     /// 지금 화면에 있는 창들, 앞에서 뒤 순서. 착지면·벽·발판이 전부 여기서 나온다.
     public required IReadOnlyList<WindowInfo> Windows { get; init; }
 

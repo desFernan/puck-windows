@@ -21,9 +21,8 @@ and UI elements, and a chat window (tray → "Open chat") talks to Claude with
 nine tools — window listing, UI element search, pointing, clicking, screen
 capture, app launch and PowerShell. Tools that change things ask before they
 run. The pet climbs a wall or the screen's own edge all the way to the ceiling
-and crawls it upside down, pausing under the notch when one is turned on. The
-tray's "Settings…" holds the avatar, movement speed, the notch, the theme and
-launch-at-login. The code editor and terminal panel are Phase 5–6.
+and crawls it upside down. The tray's "Settings…" holds the avatar, movement
+speed, the theme and launch-at-login. The code editor and terminal panel are Phase 5–6.
 
 ## Build
 
@@ -32,10 +31,7 @@ pet-app\scripts\build.ps1                     # Release build
 dotnet run --project pet-app\Puck\Puck.csproj # launch the pet
 ```
 
-Needs the .NET 8 SDK (or newer, targeting `net8.0-windows10.0.19041.0`). The
-versioned TFM is there because the notch asks WinRT's `Windows.Media.Control`
-what the machine is playing; the floor it actually requires is Windows 10 1809
-(10.0.17763).
+Needs the .NET 8 SDK (or newer, targeting `net8.0-windows`).
 
 ## Test
 

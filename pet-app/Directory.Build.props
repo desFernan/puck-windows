@@ -1,17 +1,6 @@
 <Project>
   <PropertyGroup>
-    <!--
-      WinRT가 필요해서 붙인 버전이다. 노치가 "이 기계가 무엇을 재생 중인가"를
-      묻는 곳이 Windows.Media.Control(GlobalSystemMediaTransportControls)인데,
-      그것은 버전 없는 net8.0-windows에는 없다. mac이 MediaRemote를 쓰는 자리다.
-
-      SupportedOSPlatformVersion을 따로 낮춰 잡는 이유는, 빌드에 쓰는 SDK
-      버전이 곧 요구 사항이 되면 안 되기 때문이다. 17763(1809)은 그
-      세션 관리자가 처음 생긴 버전이라 이 앱이 실제로 요구하는 하한이고,
-      플랫폼 호환성 분석기(CA1416)가 검사하는 것도 이 값이다.
-    -->
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
-    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>12</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>

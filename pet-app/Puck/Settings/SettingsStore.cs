@@ -68,19 +68,6 @@ public sealed class SettingsStore
         set => Set("avoid_focused_window", value);
     }
 
-    /// 화면 위 한가운데의 노치. mac은 MacBook의 카메라 하우징을 쓰지만
-    /// Windows에는 그런 하드웨어가 없어서 늘 그려서 만든다.
-    ///
-    /// 기본이 꺼짐인 이유는 mac과 같다 — 요청하지 않은 사람의 화면에
-    /// 없던 물건이 생기면 안 된다. 끄면 펫의 세계에서도 사라진다
-    /// (ScreenSpace.Current의 withNotches). 그리지 않는 노치를 펫만
-    /// 피해 돌면 없는 것을 피하는 것으로 보인다.
-    public bool NotchEnabled
-    {
-        get => GetBool("notch_enabled", false);
-        set => Set("notch_enabled", value);
-    }
-
     /// 사람이 직접 끈 소리. 집중 지원이 조용히 시킨 것과는 다른 것이라
     /// 따로 둔다 — 집중 지원이 풀렸다고 사람이 끈 소리가 돌아오면 안 된다.
     public bool Muted
