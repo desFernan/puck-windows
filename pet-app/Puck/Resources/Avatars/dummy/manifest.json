@@ -3,8 +3,8 @@
   "name": "dummy",
   "type": "sprites",
   "hitbox": {
-    "width": 168,
-    "height": 172
+    "width": 130,
+    "height": 133
   },
   "clips": {
     "idle": "idle"
