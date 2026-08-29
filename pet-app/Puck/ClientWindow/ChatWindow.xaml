@@ -13,6 +13,7 @@
     -->
     <DataTemplate DataType="{x:Type client:TranscriptEntry}">
       <TextBlock Text="{Binding Text}"
+                 AutomationProperties.Name="{Binding SpokenText}"
                  TextWrapping="Wrap"
                  Margin="0,0,0,8"
                  FontSize="14">
@@ -58,6 +59,7 @@
     <!-- 승인. 물어볼 것이 없으면 자리를 차지하지 않는다. -->
     <Border x:Name="ApprovalPanel"
             Grid.Row="1"
+            AutomationProperties.IsOffscreenBehavior="Onscreen"
             Visibility="Collapsed"
             Background="{DynamicResource Surface}"
             BorderBrush="{DynamicResource StatusWarning}"

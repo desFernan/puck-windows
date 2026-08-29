@@ -17,7 +17,13 @@ public enum TranscriptKind
     Notice,
 }
 
-public sealed record TranscriptEntry(TranscriptKind Kind, string Text);
+public sealed record TranscriptEntry(TranscriptKind Kind, string Text)
+{
+    /// 스크린리더가 읽을 한 줄. 화면에서 이 줄이 누구 것인지는 **색**이
+    /// 말하는데, 색은 읽히지 않는다. 그래서 종류를 글로 앞에 붙인다.
+    public string SpokenText
+        => Localization.Strings.KindOf(Kind.ToString().ToLowerInvariant()) + ": " + Text;
+}
 
 /// 채팅 창에 쌓이는 줄들.
 ///

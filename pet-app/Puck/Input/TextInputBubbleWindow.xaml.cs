@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -20,6 +21,9 @@ public partial class TextInputBubbleWindow : Window
     {
         InitializeComponent();
         Prompt.Text = Strings.BubblePrompt;
+        // 안내 문구는 입력란 위에 그려질 뿐 입력란에 붙어 있지 않다.
+        AutomationProperties.SetName(Input, Strings.A11yBubble);
+        AutomationProperties.SetHelpText(Input, Strings.BubblePrompt);
         SourceInitialized += (_, _) =>
         {
             _handle = new WindowInteropHelper(this).Handle;

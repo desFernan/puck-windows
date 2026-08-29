@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Automation;
 using Puck.Avatar;
 using Puck.ClientWindow;
 using Puck.Diagnostics;
@@ -40,6 +41,14 @@ public partial class SettingsWindow : Window
         _onAvatarChanged = onAvatarChanged;
 
         Title = Strings.SettingsTitle;
+
+        // 이름표를 옆에 그리는 것만으로는 스크린리더에 닿지 않는다.
+        // 붙이지 않으면 창 전체가 이름 없는 콤보 상자와 이름 없는
+        // 슬라이더로 읽힌다 — 컨트롤이 있다는 것은 들리고 그것이
+        // 무엇인지는 끝내 들리지 않는다.
+        AutomationProperties.SetName(AvatarPicker, Strings.A11yAvatar);
+        AutomationProperties.SetName(SpeedSlider, Strings.A11ySpeed);
+        AutomationProperties.SetName(ThemePicker, Strings.A11yTheme);
         LaunchCaption.Text = Strings.SettingsLaunchCaption;
 
         Load();

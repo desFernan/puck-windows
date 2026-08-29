@@ -388,6 +388,12 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
     {
         if (_body is null || _controller is null || _walk is null) return;
 
+        // 움직임을 줄여 달라고 해 두었으면 배회는 일어나지 않는다. 배회만
+        // 걸러지는 이유는 그것이 아무도 요청하지 않은 유일한 움직임이기
+        // 때문이다 — 드래그도, 던지기도, 도구도, 불러서 오는 것도 이
+        // 함수를 지나가지 않는다.
+        outcome = ReducedMotion.Apply(outcome, ReducedMotion.IsOn);
+
         switch (outcome)
         {
             case WanderOutcome.ClimbNearestWindow when _windows is not null && _avatar is not null:

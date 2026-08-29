@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Input;
 using Puck.Localization;
 
@@ -29,6 +30,13 @@ public partial class ChatWindow : Window
         DenyButton.Content = Strings.ChatDeny;
         Lines.ItemsSource = _transcript.Entries;
 
+        // 화면에서는 줄 옆의 이름표가, 여기서는 이것이 무엇이 무엇인지
+        // 말한다. 컨트롤 자체에 붙지 않은 이름은 스크린리더에 닿지 않아서,
+        // 창 전체가 이름 없는 목록과 이름 없는 입력란으로 읽힌다.
+        AutomationProperties.SetName(Lines, Strings.A11yTranscript);
+        AutomationProperties.SetName(Input, Strings.A11yInput);
+        AutomationProperties.SetName(ApprovalPanel, Strings.A11yApproval);
+
         Append(TranscriptKind.Notice, Strings.ChatPrompt);
     }
 
@@ -45,6 +53,12 @@ public partial class ChatWindow : Window
         }
 
         _transcript.Add(kind, text);
+
+        // 펫이 한 말은 소리 내어 전한다. 이 창은 포커스를 가져가지 않고
+        // 닫혀 있을 수도 있어서, 목록에 줄이 하나 붙는 것만으로는
+        // 스크린리더에게 읽을 이유가 생기지 않는다. 읽던 것을 끊지는
+        // 않는다 — 지나가는 말이다.
+        if (kind == TranscriptKind.Pet) App.ScreenReaderAnnouncer.Announce(this, text);
         // 새 줄은 언제나 보여야 한다. 사람이 위로 올려 읽고 있어도 마찬가지다 —
         // 답이 왔는데 화면이 그대로면 펫이 무시한 것으로 읽힌다.
         Scroller.ScrollToEnd();
@@ -74,6 +88,11 @@ public partial class ChatWindow : Window
         ApprovalQuestion.Text = string.Format(Strings.ChatApprovalQuestion, toolName);
         ApprovalArguments.Text = arguments;
         ApprovalPanel.Visibility = Visibility.Visible;
+
+        // 물음은 사람이 아직 입력란에 커서를 둔 채로 도착한다. 포커스가
+        // 움직이지 않으므로 스크린리더에게는 읽을 이유가 없고, 그러면
+        // 실행은 아무 설명 없이 멈춘 뒤 아무도 묻는 줄 모르는 답을 기다린다.
+        App.ScreenReaderAnnouncer.Announce(this, ApprovalQuestion.Text, interrupting: true);
 
         var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pendingApproval = pending;
