@@ -9,6 +9,12 @@ public static class IslandLayout
     /// 펫이 설 수 있는 가장 낮은 섬. 이보다 낮으면 펫이 들어갈 자리가 없다.
     public const double MinimumHeight = 60;
 
+    /// 펼친 섬의 기본 높이.
+    ///
+    /// 펫은 섬이 남겨 준 자리에 맞춰진다 — 그러니 이 숫자가 곧 펫이 얼마나
+    /// 크게 나오는지다. 90은 무엇이 있는지 보려면 몸을 기울여야 하는 선반이었다.
+    public const double DefaultHeight = 150;
+
     /// 설계가 정한 천장. 그림이 더 버틸 수 있어도 여기서 멈춘다.
     public const double MaximumIslandHeight = 260;
 

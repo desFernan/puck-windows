@@ -23,6 +23,11 @@ A Windows desktop pet that is also an AI agent. One .NET 8 app:
   tools: window listing, frontmost window, UI element search, pointing,
   clicking, screen capture, app launch, `run_shell` and `run_powershell`.
   Anything that changes something asks before it runs.
+- **Its island** — a panel at the top of the chat window, filled with a picture
+  and foldable to a band drawn in that picture's own colours. Open the window
+  and the pet flies over to live in it; close it and the pet flies home to the
+  desktop. Drop your own `Tank\seabed.png` in and it is filled with that
+  instead.
 
 The tray also holds **설정…** (avatar, movement speed, theme,
 launch-at-login), **커스터마이징 폴더 열기** and **아바타 다시 불러오기**. The
@@ -77,6 +82,7 @@ macOS, just a different root:
 ```
 %LOCALAPPDATA%\Puck\
     Avatars\<name>\                  one folder per character
+    Tank\seabed.png                  the picture the island is filled with
     settings.json
     .env
     logs\puck-YYYY-MM-DD.jsonl

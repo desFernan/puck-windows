@@ -13,7 +13,10 @@ public sealed class TankResidency
     /// 섬 위에 선 펫의 키. 섬은 누가 보든 같은 높이라, 비율이 아니라 고정
     /// 값이다 — 비율로 두면 설정에 따라 펫이 섬을 가득 채우거나 그 안에서
     /// 달그락거린다.
-    public const double DefaultPetHeight = 56;
+    ///
+    /// 섬 높이보다 조금 낮게: 발끝부터 정수리까지가 벽에 닿으면 서 있는
+    /// 것이 아니라 끼어 있는 것으로 보인다.
+    public const double DefaultPetHeight = 110;
 
     /// 갈 수 있는 수조. 없으면 null.
     public Rect? Area { get; private set; }

@@ -19,8 +19,7 @@ public sealed class SpriteAvatar : IAvatarPlayable
     {
         _load = load;
         PackageDirectory = packageDirectory;
-        DesktopSize = new Size(load.Manifest.Hitbox.Width * load.Manifest.Scale,
-                               load.Manifest.Hitbox.Height * load.Manifest.Scale);
+        DesktopSize = SizeFor(load.Manifest.Hitbox);
     }
 
     /// 그려지는 크기의 몇 배로 디코딩할지. 1배로 딱 맞추면 스쿼시&스트레치로
@@ -41,8 +40,30 @@ public sealed class SpriteAvatar : IAvatarPlayable
     /// 그 그림이 캐시에 남은 채로 펫이 다시 커졌을 때 흐려진다.
     private int DecodeWidth => Math.Max(1, (int)Math.Ceiling(DesktopSize.Width * Supersample));
 
-    /// manifest hitbox × scale — 바탕화면에서의 크기.
+    /// 바탕화면에서 펫이 서는 키. **앱이 정한다.**
+    ///
+    /// 매니페스트의 hitbox를 그대로 화면 크기로 쓰면, 펫이 얼마나 크게
+    /// 나오는지를 패키지가 저 좋을 대로 고른 숫자가 정하게 된다 — 130x133로
+    /// 그린 것과 251x300으로 그린 것이 같은 설정에서 머리 하나만큼 차이가
+    /// 난다. 패키지의 무엇도 펫의 크기를 정해서는 안 된다. 그건 앱과
+    /// 사람의 일이다.
+    public const double DefaultHeight = 133;
+
+    /// 바탕화면에서의 크기.
     public Size DesktopSize { get; }
+
+    /// hitbox는 이름 그대로 **모양**으로만 쓴다 — 비율을 주고, 크기는 앱이 준다.
+    ///
+    /// 긴 쪽을 맞춘다. 높이만 맞추면 10:1로 적어 낸 패키지가 바탕화면을
+    /// 가로지르는 현수막이 된다.
+    public static Size SizeFor(Hitbox hitbox)
+    {
+        var longest = Math.Max(hitbox.Width, hitbox.Height);
+        if (longest <= 0) return new Size(DefaultHeight, DefaultHeight);
+
+        var scale = DefaultHeight / longest;
+        return new Size(hitbox.Width * scale, hitbox.Height * scale);
+    }
 
     /// 지금 크기를 바탕화면 크기의 몇 배로 그릴 것인가.
     ///

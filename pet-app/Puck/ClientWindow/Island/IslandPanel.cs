@@ -20,7 +20,7 @@ public sealed class IslandPanel : FrameworkElement
     /// `IslandLayout.MaximumHeight`를 보라.
     public static readonly DependencyProperty OpenHeightProperty = DependencyProperty.Register(
         nameof(OpenHeight), typeof(double), typeof(IslandPanel),
-        new FrameworkPropertyMetadata(90.0,
+        new FrameworkPropertyMetadata(IslandLayout.DefaultHeight,
             FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsRender));
 
     public bool IsFolded

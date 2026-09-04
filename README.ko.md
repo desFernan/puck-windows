@@ -20,6 +20,9 @@ AI 에이전트이기도 한 Windows 데스크톱 펫입니다. .NET 8 앱 하�
 - **채팅 창** — 트레이 → **대화 열기**. 도구 아홉 개로 Windows를 조작합니다:
   창 목록, 최상단 창, UI 요소 찾기, 가리키기, 클릭, 화면 캡처, 프로그램 실행,
   `run_shell`, `run_powershell`. 무언가를 바꾸는 도구는 실행 전에 사람에게 묻습니다.
+- **섬** — 채팅 창 맨 위의 그림 패널. 접으면 그 그림의 색을 딴 띠가 됩니다.
+  창을 열면 펫이 날아와 그 안에 살고, 닫으면 바탕화면으로 돌아갑니다.
+  `Tank\seabed.png`를 넣으면 그 그림으로 채워집니다.
 
 트레이에는 **설정…**(아바타·이동 속도·테마·자동 시작), **커스터마이징 폴더 열기**,
 **아바타 다시 불러오기**도 있습니다. 에이전트 코어(채팅, 도구, 승인)는
@@ -73,6 +76,7 @@ AGENT_PERMISSIONS=tools       # tools | edits | all | auto
 ```
 %LOCALAPPDATA%\Puck\
     Avatars\<name>\                  캐릭터 하나당 폴더 하나
+    Tank\seabed.png                  섬을 채우는 그림
     settings.json
     .env
     logs\puck-YYYY-MM-DD.jsonl
