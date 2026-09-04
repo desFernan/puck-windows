@@ -4,18 +4,25 @@ using Puck.Avatar;
 
 namespace Puck.Overlay;
 
-/// 지금 그려야 할 배율. 좌우 반전, 상하 반전, 스쿼시&스트레치가 여기서 합쳐진다.
+/// 지금 그려야 할 변환. 자세의 방향(`AvatarPoseOrientation`)에 스쿼시&스트레치를
+/// 곱해 넣는다.
+///
+/// 방향 자체는 여기서 정하지 않는다 — 그건 미리보기도 물어야 하는 것이고,
+/// 두 곳에서 각자 합치면 보정이 뒤집기와 회전을 함께 쓰는 순간 어긋난다.
 public static class SpriteTransform
 {
     /// 스쿼시&스트레치가 그림을 뒤집는 일이 없게 하는 하한.
     public const double MinimumBounceScale = 0.05;
 
-    public static (double ScaleX, double ScaleY) For(AvatarFacing facing, bool upsideDown, double bounceScaleY)
+    public static (double ScaleX, double ScaleY, double Rotation) For(
+        AvatarFacing facing, bool upsideDown, double bounceScaleY,
+        string clip = "walk", AvatarPoseAdjustment? adjustment = null)
     {
+        var orientation = AvatarPoseOrientation.Of(
+            AvatarPoseOrientation.PoseOf(facing, upsideDown, clip), adjustment);
+
         var bounce = Math.Max(MinimumBounceScale, bounceScaleY);
-        var scaleX = facing == AvatarFacing.Left ? -1.0 : 1.0;
-        var scaleY = upsideDown ? -bounce : bounce;
-        return (scaleX, scaleY);
+        return (orientation.ScaleX, orientation.ScaleY * bounce, orientation.Rotation);
     }
 }
 
@@ -39,6 +46,9 @@ public sealed class SpriteView : FrameworkElement
     /// 물리 픽셀 → DIP 환산 배율. 창이 다른 배율의 모니터로 넘어가면 바뀐다.
     public double DpiScale { get; set; } = 1.0;
 
+    /// 지금 자세에 걸린 보정. 없으면 보정 없음.
+    public Func<SpriteAvatar, AvatarPoseAdjustment?>? Adjustment { get; set; }
+
     public void Invalidate() => InvalidateVisual();
 
     protected override void OnRender(DrawingContext drawingContext)
@@ -54,13 +64,21 @@ public sealed class SpriteView : FrameworkElement
         var width = avatar.Size.Width / DpiScale;
         var height = avatar.Size.Height / DpiScale;
 
-        var (scaleX, scaleY) = SpriteTransform.For(avatar.Facing, avatar.UpsideDown, avatar.BounceScaleY);
+        var (scaleX, scaleY, rotation) = SpriteTransform.For(
+            avatar.Facing, avatar.UpsideDown, avatar.BounceScaleY,
+            avatar.CurrentClipKey, Adjustment?.Invoke(avatar));
 
         // 반전과 스쿼시의 기준점은 접지점(발밑) — 여기를 중심으로 잡지 않으면
         // 뒤집을 때 펫이 옆으로 튀고, 스쿼시할 때 바닥에서 뜬다.
         drawingContext.PushTransform(new TranslateTransform(localX, localY));
         drawingContext.PushTransform(new ScaleTransform(scaleX, scaleY));
+
+        var turned = rotation != 0;
+        if (turned) drawingContext.PushTransform(new RotateTransform(rotation * 180 / Math.PI));
+
         drawingContext.DrawImage(image, new Rect(-width / 2, -height, width, height));
+
+        if (turned) drawingContext.Pop();
         drawingContext.Pop();
         drawingContext.Pop();
     }

@@ -245,6 +245,20 @@ public sealed class PetBootstrap : IDisposable, IWanderDelegate
                 _sfx?.Play(_sounds?.FilePath(handler.ClipKey));
         };
         _window!.Sprite.Avatar = avatar;
+        // 반대로 그려진 그림을 고치는 값. 렌더러가 지금 자세로 골라 쓴다.
+        _window.Sprite.Adjustment = Adjustment;
+    }
+
+    /// 지금 자세에 걸린 보정. 설정에 없으면 보정 없음.
+    private AvatarPoseAdjustment? Adjustment(SpriteAvatar avatar)
+    {
+        var adjustments = _settings.AvatarPoseAdjustments;
+        if (adjustments.Count == 0) return null;
+
+        var pose = AvatarPoseOrientation.PoseOf(avatar.Facing, avatar.UpsideDown, avatar.CurrentClipKey);
+        if (pose is not { } current) return null;
+
+        return adjustments.TryGetValue(current.ToString(), out var found) ? found : null;
     }
 
     /// 커서가 있는 디스플레이의 바닥 한가운데.

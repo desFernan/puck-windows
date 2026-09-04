@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Puck.Avatar;
 using Puck.Diagnostics;
 
 namespace Puck.Settings;
@@ -78,6 +79,42 @@ public sealed class SettingsStore
 
     /// 임시 파일에 쓰고 갈아끼운다 — 저장 중에 죽어도 반쯤 쓰인
     /// settings.json이 남지 않는다.
+    /// 자세별 보정 — 반대로 그려진 그림을 앱 밖에서 고치지 않아도 되게.
+    ///
+    /// 자세마다 키를 두지 않고 JSON 한 덩이로 읽고 쓴다. 통째로 읽고 통째로
+    /// 쓰는 값이고, 자세마다 키를 두면 어긋날 자리가 여섯 배가 된다.
+    ///
+    /// 이 포트에는 아직 이걸 만지는 화면이 없다. 값은 settings.json에서
+    /// 손으로 적는다 — 커스터마이징 폴더에 있는 그 파일이다.
+    public IReadOnlyDictionary<string, AvatarPoseAdjustment> AvatarPoseAdjustments
+    {
+        get
+        {
+            if (_raw["avatar_pose_adjustments"] is not JsonObject stored) return Empty;
+
+            var byPose = new Dictionary<string, AvatarPoseAdjustment>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (pose, value) in stored)
+            {
+                try
+                {
+                    if (value.Deserialize<AvatarPoseAdjustment>() is { } adjustment)
+                        byPose[pose] = adjustment;
+                }
+                catch (JsonException)
+                {
+                    // 손으로 적는 값이라 틀릴 수 있다. 하나가 틀렸다고
+                    // 나머지 다섯까지 버릴 이유는 없다.
+                    AppLogger.Warning("settings", "자세 보정 하나를 읽지 못했습니다",
+                        new Dictionary<string, object?> { ["pose"] = pose });
+                }
+            }
+
+            return byPose;
+        }
+    }
+
+    private static readonly Dictionary<string, AvatarPoseAdjustment> Empty = new();
+
     public void Save()
     {
         var directory = Path.GetDirectoryName(_path);
