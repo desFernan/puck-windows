@@ -1,0 +1,59 @@
+name: Release
+
+# Builds the app and attaches it to the release for a v* tag, so that the
+# Releases page carries something a person can actually run. Framework-
+# dependent builds would need the .NET desktop runtime installed first, which
+# is a step too many for a desktop pet, so this publishes self-contained: the
+# archive is larger and needs nothing on the machine it is unzipped onto.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and attach to'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish
+        shell: bash
+        run: |
+          dotnet publish pet-app/Puck/Puck.csproj \
+            -c Release -r win-x64 --self-contained true \
+            -p:DebugType=none -o dist/Puck
+
+      - name: Package
+        id: package
+        shell: bash
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          NAME="Puck-${TAG#v}-win-x64.zip"
+          powershell -Command "Compress-Archive -Path dist/Puck/* -DestinationPath '$NAME'"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "asset=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Attach to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG='${{ steps.package.outputs.tag }}'
+          gh release view "$TAG" >/dev/null 2>&1 \
+            || gh release create "$TAG" --title "Puck for Windows ${TAG#v}" --generate-notes
+          gh release upload "$TAG" '${{ steps.package.outputs.asset }}' --clobber

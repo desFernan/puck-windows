@@ -36,6 +36,15 @@ agent core (chat, tools, approvals) lives in `pet-app/Puck/Agent`.
 Not ported yet: the code editor, terminal pane and workspaces that live in
 puck-mac's separate `PuckClient` app.
 
+## Install
+
+If the release you want has an archive attached, that is the quickest way:
+`Puck-<version>-win-x64.zip` is self-contained — unzip it and run `Puck.exe`,
+with no .NET runtime to install first. It is not code-signed, so SmartScreen
+warns on the first run: **More info** → **Run anyway**.
+
+Otherwise build from source, below.
+
 ## Build
 
 ```powershell
@@ -146,3 +155,12 @@ applies here without changes.
 
 Questions, bug reports, feature ideas, or just want to show off your custom
 avatar — join us on **[Discord](https://discord.gg/nGqtBGP857)**.
+
+Want to help? [CONTRIBUTING.md](CONTRIBUTING.md) says how to build it, where
+the easy issues are, and what a good pull request looks like here.
+
+## License
+
+MIT for the source — see [LICENSE](LICENSE). **Not** for the artwork, icons,
+fonts or audio distributed next to it: see
+[LICENSE-ASSETS.md](LICENSE-ASSETS.md) for why.

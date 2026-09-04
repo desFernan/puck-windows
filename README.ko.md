@@ -31,6 +31,15 @@ AI 에이전트이기도 한 Windows 데스크톱 펫입니다. .NET 8 앱 하�
 아직 포팅되지 않은 것: puck-mac의 별도 앱 `PuckClient`에 있는 코드 에디터,
 터미널 패널, 워크스페이스.
 
+## 설치
+
+릴리스에 압축 파일이 붙어 있다면 그게 제일 빠릅니다. `Puck-<버전>-win-x64.zip`은
+자체 포함 빌드라 .NET 런타임을 따로 깔 필요 없이, 풀고 `Puck.exe`를 실행하면
+됩니다. 코드 서명이 없어서 첫 실행 때 SmartScreen이 막습니다 — **추가 정보** →
+**실행**.
+
+아니면 아래에서 직접 빌드하세요.
+
 ## 빌드
 
 ```powershell
@@ -138,3 +147,11 @@ Avatars\my-pet\
 
 질문, 버그 제보, 기능 아이디어, 아니면 그냥 직접 만든 아바타를 자랑하고 싶어도 —
 **[디스코드](https://discord.gg/nGqtBGP857)**에서 만나요.
+
+직접 고쳐보고 싶다면 [CONTRIBUTING.md](CONTRIBUTING.md)에 빌드 방법, 쉬운
+이슈가 어디 있는지, 어떤 PR이 좋은지 적어두었습니다.
+
+## 라이선스
+
+소스는 MIT입니다 — [LICENSE](LICENSE). 옆에 있는 **그림·아이콘·폰트·오디오는
+아닙니다**: 이유는 [LICENSE-ASSETS.md](LICENSE-ASSETS.md)에 적어두었습니다.
