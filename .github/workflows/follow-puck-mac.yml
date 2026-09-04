@@ -26,6 +26,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      # Nothing here needs the tree, so there is no checkout -- which leaves
+      # `gh` with no git remote to infer the repository from, and every issue
+      # call failing on a repository it was never told about.
+      GH_REPO: ${{ github.repository }}
       SOURCE: desFernan/puck-mac
       LABEL: needs-port-from-puck-mac
     steps:
@@ -39,9 +43,14 @@ jobs:
           # where it got to without keeping a file in the tree -- which would
           # mean a bot commit on main, and a bot commit on main is another
           # repository's tracking issue.
+          # Assigned before it is looped over: a command substitution that
+          # fails inside a `for` list is not something `set -e` stops for, so
+          # this read as "no issues seen yet" rather than as the error it was.
+          SEEN=$(gh issue list --label "$LABEL" --state all \
+                   --json number,updatedAt --jq 'sort_by(.updatedAt) | reverse | .[].number')
+
           MARKER=""
-          for NUM in $(gh issue list --label "$LABEL" --state all \
-                         --json number,updatedAt --jq 'sort_by(.updatedAt) | reverse | .[].number'); do
+          for NUM in $SEEN; do
             FOUND=$(gh issue view "$NUM" --json body --jq '.body' \
                     | sed -n 's/.*<!-- last-seen: \([0-9a-f]\{7,40\}\) -->.*/\1/p' | head -1)
             if [ -n "$FOUND" ]; then MARKER="$FOUND"; break; fi
