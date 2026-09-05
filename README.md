@@ -34,7 +34,9 @@ launch-at-login), **커스터마이징 폴더 열기** and **아바타 다시 �
 agent core (chat, tools, approvals) lives in `pet-app/Puck/Agent`.
 
 Not ported yet: the code editor, terminal pane and workspaces that live in
-puck-mac's separate `PuckClient` app.
+puck-mac's separate `PuckClient` app, and what puck-mac added in 0.2.0: shells
+that outlive the call that started them, work the agent runs on a schedule,
+and a diff of what it changed before you keep it.
 
 ## Install
 
